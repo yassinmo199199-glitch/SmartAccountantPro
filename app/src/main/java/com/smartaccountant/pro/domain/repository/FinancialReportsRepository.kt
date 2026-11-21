@@ -17,6 +17,30 @@ data class FinancialReportLine(
     val amount: Double
 )
 
+data class TrialBalanceLine(
+    val accountId: String,
+    val accountName: String,
+    val category: AccountCategory,
+    val openingDebit: Double,
+    val openingCredit: Double,
+    val periodDebit: Double,
+    val periodCredit: Double,
+    val finalDebit: Double,
+    val finalCredit: Double
+)
+
+data class TrialBalanceReport(
+    val fromMillis: Long,
+    val toMillis: Long,
+    val lines: List<TrialBalanceLine>,
+    val totalOpeningDebit: Double,
+    val totalOpeningCredit: Double,
+    val totalPeriodDebit: Double,
+    val totalPeriodCredit: Double,
+    val totalFinalDebit: Double,
+    val totalFinalCredit: Double
+)
+
 data class ProfitLossReport(
     val fromMillis: Long,
     val toMillis: Long,
@@ -119,6 +143,61 @@ class FinancialReportsRepository(private val db: AppDatabase) {
         val invoices = db.invoiceDao().getPostedInvoicesThroughDate(companyId, asOfMillis)
         val vouchers = db.voucherDao().getVouchersThroughDate(companyId, asOfMillis)
         return FinancialReportCalculations.aging(accounts, invoices, asOfMillis, category, vouchers)
+    }
+
+    suspend fun getTrialBalance(
+        user: UserEntity,
+        companyId: String,
+        fromMillis: Long,
+        toMillis: Long
+    ): TrialBalanceReport {
+        requireFinancialReportAccess(user, companyId)
+        val accounts = db.accountDao().getAllActiveAccounts(companyId)
+        val openingBalances = db.reportsDao().getVoucherBalances(companyId, null, fromMillis - 1, excludeOpening = false)
+        val periodBalances = db.reportsDao().getVoucherBalances(companyId, fromMillis, toMillis, excludeOpening = true)
+
+        val lines = accounts.map { acc ->
+            val op = openingBalances.find { it.accountId == acc.id }
+            val per = periodBalances.find { it.accountId == acc.id }
+
+            var opDebit = acc.openingDebit + (op?.totalDebit ?: 0.0)
+            var opCredit = acc.openingCredit + (op?.totalCredit ?: 0.0)
+            val netOp = opDebit - opCredit
+            if (netOp >= 0) { opDebit = netOp; opCredit = 0.0 } else { opDebit = 0.0; opCredit = -netOp }
+
+            val pDebit = per?.totalDebit ?: 0.0
+            val pCredit = per?.totalCredit ?: 0.0
+
+            val totDebit = opDebit + pDebit
+            val totCredit = opCredit + pCredit
+            val netTot = totDebit - totCredit
+            val fDebit = if (netTot >= 0) netTot else 0.0
+            val fCredit = if (netTot < 0) -netTot else 0.0
+
+            TrialBalanceLine(
+                accountId = acc.id,
+                accountName = acc.name,
+                category = acc.category,
+                openingDebit = opDebit,
+                openingCredit = opCredit,
+                periodDebit = pDebit,
+                periodCredit = pCredit,
+                finalDebit = fDebit,
+                finalCredit = fCredit
+            )
+        }
+
+        return TrialBalanceReport(
+            fromMillis = fromMillis,
+            toMillis = toMillis,
+            lines = lines,
+            totalOpeningDebit = lines.sumOf { it.openingDebit },
+            totalOpeningCredit = lines.sumOf { it.openingCredit },
+            totalPeriodDebit = lines.sumOf { it.periodDebit },
+            totalPeriodCredit = lines.sumOf { it.periodCredit },
+            totalFinalDebit = lines.sumOf { it.finalDebit },
+            totalFinalCredit = lines.sumOf { it.finalCredit }
+        )
     }
 
     private fun requireFinancialReportAccess(user: UserEntity, companyId: String) {

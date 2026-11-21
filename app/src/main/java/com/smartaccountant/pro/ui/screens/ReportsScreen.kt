@@ -1,6 +1,8 @@
 package com.smartaccountant.pro.ui.screens
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -44,6 +46,8 @@ import com.smartaccountant.pro.domain.repository.BalanceSheetReport
 import com.smartaccountant.pro.domain.repository.FinancialReportLine
 import com.smartaccountant.pro.domain.repository.ProfitLossReport
 import com.smartaccountant.pro.domain.repository.ProfitabilityReport
+import com.smartaccountant.pro.domain.repository.TrialBalanceLine
+import com.smartaccountant.pro.domain.repository.TrialBalanceReport
 import com.smartaccountant.pro.services.MessagingShareService
 import com.smartaccountant.pro.ui.components.PermissionGuard
 import com.smartaccountant.pro.ui.components.SyncStatusDot
@@ -98,21 +102,23 @@ fun ReportsScreen(mainViewModel: MainViewModel, navController: androidx.navigati
     val permissions = PermissionManager.permissionsOf(user)
     val canViewFinancialReports = permissions.canViewFinancialReports
     val canViewProfitability = permissions.canViewProfitability
+    var trialBalanceReport by remember { mutableStateOf<TrialBalanceReport?>(null) }
     val visibleTabs = buildList {
         if (canViewFinancialReports) {
             add(0 to "كشف الحساب والتفاصيل")
-            add(1 to "السندات والقيود")
-            add(2 to "الفواتير والمبيعات")
-            add(3 to "أرصدة الحسابات")
-            add(4 to "قائمة الدخل")
-            add(5 to "الميزانية العمومية")
-            add(6 to "أعمار الديون")
+            add(1 to "ميزان المراجعة (6 أعمدة)")
+            add(2 to "السندات والقيود")
+            add(3 to "الفواتير والمبيعات")
+            add(4 to "أرصدة الحسابات")
+            add(5 to "قائمة الدخل")
+            add(6 to "الميزانية العمومية")
+            add(7 to "أعمار الديون")
         }
-        if (canViewProfitability) add(7 to "ربحية الأصناف")
+        if (canViewProfitability) add(8 to "ربحية الأصناف")
     }
 
     LaunchedEffect(user?.id, canViewFinancialReports, canViewProfitability) {
-        if (!canViewFinancialReports && canViewProfitability) selectedTab = 7
+        if (!canViewFinancialReports && canViewProfitability) selectedTab = 8
     }
 
     LaunchedEffect(
@@ -123,7 +129,21 @@ fun ReportsScreen(mainViewModel: MainViewModel, navController: androidx.navigati
         if (companyId.isBlank()) return@LaunchedEffect
         financialReportError = null
         when (selectedTab) {
-            4 -> {
+            1 -> {
+                financialReportLoading = true
+                try {
+                    trialBalanceReport = mainViewModel.container.financialReportsRepository.getTrialBalance(
+                        currentUser, companyId, reportFromMillis, reportToMillis
+                    )
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    financialReportError = UiErrorMessages.fromThrowable(e, "تعذر تحميل ميزان المراجعة")
+                } finally {
+                    financialReportLoading = false
+                }
+            }
+            5 -> {
                 financialReportLoading = true
                 try {
                     profitLossReport = mainViewModel.container.financialReportsRepository.getProfitLoss(
@@ -137,7 +157,7 @@ fun ReportsScreen(mainViewModel: MainViewModel, navController: androidx.navigati
                     financialReportLoading = false
                 }
             }
-            5 -> {
+            6 -> {
                 financialReportLoading = true
                 try {
                     balanceSheetReport = mainViewModel.container.financialReportsRepository.getBalanceSheet(
@@ -151,7 +171,7 @@ fun ReportsScreen(mainViewModel: MainViewModel, navController: androidx.navigati
                     financialReportLoading = false
                 }
             }
-            6 -> {
+            7 -> {
                 financialReportLoading = true
                 try {
                     agingReport = mainViewModel.container.financialReportsRepository.getAging(
@@ -165,7 +185,7 @@ fun ReportsScreen(mainViewModel: MainViewModel, navController: androidx.navigati
                     financialReportLoading = false
                 }
             }
-            7 -> {
+            8 -> {
                 financialReportLoading = true
                 try {
                     profitabilityReport = mainViewModel.container.profitabilityRepository.getProfitability(
@@ -594,7 +614,16 @@ fun ReportsScreen(mainViewModel: MainViewModel, navController: androidx.navigati
                                 onNavigateToNewVoucher = { accId -> navController.navigate(Screen.VoucherEntry.createRoute(type = "RECEIPT", accountId = accId)) }
                             )
                         }
-                        1 -> VouchersTab(
+                        1 -> TrialBalanceTab(
+                            fromMillis = reportFromMillis,
+                            toMillis = reportToMillis,
+                            onFromSelected = { reportFromMillis = it },
+                            onToSelected = { reportToMillis = it },
+                            report = trialBalanceReport,
+                            loading = financialReportLoading,
+                            error = financialReportError
+                        )
+                        2 -> VouchersTab(
                             filteredVouchers,
                             accounts,
                             voucherSearch,
@@ -618,9 +647,9 @@ fun ReportsScreen(mainViewModel: MainViewModel, navController: androidx.navigati
                             },
                             onDeleteVoucher = { voucher -> voucherPendingDelete = voucher }
                         )
-                        2 -> InvoicesTab(periodInvoices, totalSales, totalPurchases, stockValuation, navController)
-                        3 -> AccountsTab(accountBalances, navController)
-                        4 -> ProfitLossTab(
+                        3 -> InvoicesTab(periodInvoices, totalSales, totalPurchases, stockValuation, navController)
+                        4 -> AccountsTab(accountBalances, navController)
+                        5 -> ProfitLossTab(
                             fromMillis = reportFromMillis,
                             toMillis = reportToMillis,
                             onFromSelected = { reportFromMillis = it },
@@ -629,7 +658,7 @@ fun ReportsScreen(mainViewModel: MainViewModel, navController: androidx.navigati
                             loading = financialReportLoading,
                             error = financialReportError
                         )
-                        5 -> BalanceSheetTab(
+                        6 -> BalanceSheetTab(
                             asOfMillis = balanceSheetDateMillis,
                             onDateSelected = { balanceSheetDateMillis = it },
                             report = balanceSheetReport,
@@ -638,7 +667,7 @@ fun ReportsScreen(mainViewModel: MainViewModel, navController: androidx.navigati
                             onExport = { exportBalanceSheet() },
                             canExport = PermissionManager.permissionsOf(user).canExportAndShare && balanceSheetReport != null
                         )
-                        6 -> AgingTab(
+                        7 -> AgingTab(
                             asOfMillis = agingDateMillis,
                             onDateSelected = { agingDateMillis = it },
                             category = agingCategory,
@@ -651,7 +680,7 @@ fun ReportsScreen(mainViewModel: MainViewModel, navController: androidx.navigati
                             onExport = { exportAging() },
                             canExport = PermissionManager.permissionsOf(user).canExportAndShare && agingReport != null
                         )
-                        7 -> ProfitabilityTab(
+                        8 -> ProfitabilityTab(
                             report = profitabilityReport,
                             loading = financialReportLoading,
                             error = financialReportError,
@@ -1392,15 +1421,144 @@ private fun toPickerDateMillis(localMillis: Long): Long {
 private fun fromPickerDateMillis(pickerMillis: Long, isEndDate: Boolean): Long {
     val utcDate = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply { timeInMillis = pickerMillis }
     return Calendar.getInstance().apply {
-        clear()
-        set(
-            utcDate.get(Calendar.YEAR),
-            utcDate.get(Calendar.MONTH),
-            utcDate.get(Calendar.DAY_OF_MONTH),
-            if (isEndDate) 23 else 0,
-            if (isEndDate) 59 else 0,
-            if (isEndDate) 59 else 0
-        )
-        if (isEndDate) set(Calendar.MILLISECOND, 999)
+        set(utcDate.get(Calendar.YEAR), utcDate.get(Calendar.MONTH), utcDate.get(Calendar.DAY_OF_MONTH))
+        if (isEndDate) {
+            set(Calendar.HOUR_OF_DAY, 23)
+            set(Calendar.MINUTE, 59)
+            set(Calendar.SECOND, 59)
+            set(Calendar.MILLISECOND, 999)
+        } else {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
     }.timeInMillis
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TrialBalanceTab(
+    fromMillis: Long,
+    toMillis: Long,
+    onFromSelected: (Long) -> Unit,
+    onToSelected: (Long) -> Unit,
+    report: TrialBalanceReport?,
+    loading: Boolean,
+    error: String?
+) {
+    var showFromPicker by remember { mutableStateOf(false) }
+    var showToPicker by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedButton(
+                onClick = { showFromPicker = true },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text("من: ${DateUtils.formatDate(fromMillis)}", fontSize = 12.sp)
+            }
+            OutlinedButton(
+                onClick = { showToPicker = true },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text("إلى: ${DateUtils.formatDate(toMillis)}", fontSize = 12.sp)
+            }
+        }
+
+        if (loading) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+
+        error?.let {
+            Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(8.dp))
+        }
+
+        report?.let { rep ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color.Black)
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 8.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("الحساب", modifier = Modifier.width(110.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
+                        Text("أول (مدين)", modifier = Modifier.width(75.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
+                        Text("أول (دائن)", modifier = Modifier.width(75.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
+                        Text("حركة (مدين)", modifier = Modifier.width(75.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
+                        Text("حركة (دائن)", modifier = Modifier.width(75.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
+                        Text("رصيد (مدين)", modifier = Modifier.width(75.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
+                        Text("رصيد (دائن)", modifier = Modifier.width(75.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
+                    }
+
+                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
+                        items(rep.lines) { line ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState())
+                                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(line.accountName, modifier = Modifier.width(110.dp), fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                                Text(if (line.openingDebit > 0) CurrencyFormatter.formatAmount(line.openingDebit) else "—", modifier = Modifier.width(75.dp), fontSize = 11.sp)
+                                Text(if (line.openingCredit > 0) CurrencyFormatter.formatAmount(line.openingCredit) else "—", modifier = Modifier.width(75.dp), fontSize = 11.sp)
+                                Text(if (line.periodDebit > 0) CurrencyFormatter.formatAmount(line.periodDebit) else "—", modifier = Modifier.width(75.dp), fontSize = 11.sp, color = DebitRed)
+                                Text(if (line.periodCredit > 0) CurrencyFormatter.formatAmount(line.periodCredit) else "—", modifier = Modifier.width(75.dp), fontSize = 11.sp, color = CreditGreen)
+                                Text(if (line.finalDebit > 0) CurrencyFormatter.formatAmount(line.finalDebit) else "—", modifier = Modifier.width(75.dp), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = DebitRed)
+                                Text(if (line.finalCredit > 0) CurrencyFormatter.formatAmount(line.finalCredit) else "—", modifier = Modifier.width(75.dp), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CreditGreen)
+                            }
+                            HorizontalDivider(color = Color(0xFFE2E8F0))
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFF0F1F38))
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 8.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("الإجمالي العام", modifier = Modifier.width(110.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
+                        Text(CurrencyFormatter.formatAmount(rep.totalOpeningDebit), modifier = Modifier.width(75.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
+                        Text(CurrencyFormatter.formatAmount(rep.totalOpeningCredit), modifier = Modifier.width(75.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
+                        Text(CurrencyFormatter.formatAmount(rep.totalPeriodDebit), modifier = Modifier.width(75.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
+                        Text(CurrencyFormatter.formatAmount(rep.totalPeriodCredit), modifier = Modifier.width(75.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
+                        Text(CurrencyFormatter.formatAmount(rep.totalFinalDebit), modifier = Modifier.width(75.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
+                        Text(CurrencyFormatter.formatAmount(rep.totalFinalCredit), modifier = Modifier.width(75.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
+                    }
+                }
+            }
+        }
+    }
+
+    if (showFromPicker) {
+        val pickerState = rememberDatePickerState(initialSelectedDateMillis = fromMillis)
+        DatePickerDialog(
+            onDismissRequest = { showFromPicker = false },
+            confirmButton = { TextButton(onClick = { pickerState.selectedDateMillis?.let(onFromSelected); showFromPicker = false }) { Text("تأكيد") } }
+        ) { DatePicker(state = pickerState) }
+    }
+
+    if (showToPicker) {
+        val pickerState = rememberDatePickerState(initialSelectedDateMillis = toMillis)
+        DatePickerDialog(
+            onDismissRequest = { showToPicker = false },
+            confirmButton = { TextButton(onClick = { pickerState.selectedDateMillis?.let(onToSelected); showToPicker = false }) { Text("تأكيد") } }
+        ) { DatePicker(state = pickerState) }
+    }
 }

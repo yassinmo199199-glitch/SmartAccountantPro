@@ -1,7 +1,7 @@
 {
-  "versionCode": 4,
-  "versionName": "2.2.2",
-  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v2.2.2/app-debug.apk",
-  "releaseNotes": "تحديث ترتيب أعمدة كشف الحساب الرسمية من اليمين إلى اليسار (التاريخ، نوع المستند، رقم المستند، البيان، رقم المرجع، مدين، دائن، الرصيد).",
+  "versionCode": 5,
+  "versionName": "2.3.0",
+  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v2.3.0/app-debug.apk",
+  "releaseNotes": "تطوير نظام التقارير الشامل وإضافة ميزان المراجعة السداسي وترتيب كشف الحساب من اليمين إلى اليسار واستكمال كافة القوائم المالية.",
   "mandatory": false
 }

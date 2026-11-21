@@ -14,8 +14,8 @@ android {
         applicationId = "com.smartaccountant.pro"
         minSdk = 24
         targetSdk = 35
-        versionCode = 4
-        versionName = "2.2.2"
+        versionCode = 5
+        versionName = "2.3.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
