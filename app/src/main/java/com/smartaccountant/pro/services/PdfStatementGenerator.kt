@@ -409,20 +409,20 @@ class PdfStatementGenerator(private val context: Context) {
             style = Paint.Style.STROKE
             strokeWidth = 0.7f
         }
-        val tableWidths = listOf(60, 65, 55, 120, 55, 60, 60, 72)
-        val tableHeaders = listOf("التاريخ", "نوع المستند", "رقم المستند", "البيان", "رقم المرجع", "مدين", "دائن", "الرصيد")
+        val tableWidths = listOf(72, 60, 60, 55, 120, 55, 65, 60)
+        val tableHeaders = listOf("الرصيد", "دائن", "مدين", "رقم المرجع", "البيان", "رقم المستند", "نوع المستند", "التاريخ")
         var runningBalance = 0.0
         val tableRows = if (isBalanceConfirmation) emptyList() else rows.mapIndexed { index, row ->
             runningBalance += row.debit - row.credit
             listOf(
-                DateUtils.formatDate(row.dateMillis),
-                row.docType,
-                if (row.docNumber > 0) "#${row.docNumber}" else "—",
-                row.description.ifBlank { "—" },
-                "—",
-                if (row.debit == 0.0) "—" else CurrencyFormatter.format(row.debit),
+                CurrencyFormatter.format(if (index == rows.lastIndex) netBalance else runningBalance),
                 if (row.credit == 0.0) "—" else CurrencyFormatter.format(row.credit),
-                CurrencyFormatter.format(if (index == rows.lastIndex) netBalance else runningBalance)
+                if (row.debit == 0.0) "—" else CurrencyFormatter.format(row.debit),
+                "—",
+                row.description.ifBlank { "—" },
+                if (row.docNumber > 0) "#${row.docNumber}" else "—",
+                row.docType,
+                DateUtils.formatDate(row.dateMillis)
             )
         }
         val rowPaint = TextPaint(bodyPaint)

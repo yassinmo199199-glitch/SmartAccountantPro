@@ -1,7 +1,7 @@
 {
-  "versionCode": 9,
-  "versionName": "2.3.5",
-  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v2.3.5/app-debug.apk",
-  "releaseNotes": "تحديث وتأكيد إذونات النشر الآلي لرفع ملفات الـ APK تلقائياً على GitHub Releases.",
+  "versionCode": 10,
+  "versionName": "2.3.6",
+  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v2.3.6/app-debug.apk",
+  "releaseNotes": "تعديل اتجاه رسم أعمدة كشف الحساب في ملف الـ PDF من اليمين إلى اليسار لتطابق الترتيب العربي المباشر.",
   "mandatory": false
 }
