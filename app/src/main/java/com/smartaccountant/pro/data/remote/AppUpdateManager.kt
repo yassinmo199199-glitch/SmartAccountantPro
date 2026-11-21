@@ -1,0 +1,287 @@
+package com.smartaccountant.pro.data.remote
+
+import android.app.DownloadManager
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.Settings
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.FileProvider
+import com.smartaccountant.pro.BuildConfig
+import com.smartaccountant.pro.MainActivity
+import java.io.File
+
+data class AppUpdateInfo(
+    val versionCode: Int = 0,
+    val versionName: String = "",
+    val apkUrl: String = "",
+    val releaseNotes: String = "",
+    val mandatory: Boolean = false
+)
+
+enum class AppUpdateStatus { IDLE, AVAILABLE, DOWNLOADING, READY, ERROR }
+
+data class AppUpdateState(
+    val status: AppUpdateStatus = AppUpdateStatus.IDLE,
+    val info: AppUpdateInfo? = null,
+    val message: String = ""
+)
+
+class AppUpdateManager(
+    private val context: Context,
+    private val firestore: FirestoreSyncService
+) {
+    suspend fun fetchLatest(): AppUpdateInfo? {
+        // 1. Try GitHub Releases API / Raw JSON
+        try {
+            val githubInfo = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                fetchFromGitHub()
+            }
+            if (githubInfo != null) return githubInfo
+        } catch (_: Exception) {
+            // Ignore error and fallback to Firestore
+        }
+
+        // 2. Fallback to Firestore
+        val data = firestore.getRootDocumentMap("app_config", "latest") ?: return null
+        val versionCode = (data["versionCode"] as? Number)?.toInt() ?: 0
+        val apkUrl = data["apkUrl"] as? String ?: return null
+        if (versionCode <= BuildConfig.VERSION_CODE || apkUrl.isBlank()) return null
+        return AppUpdateInfo(
+            versionCode = versionCode,
+            versionName = data["versionName"] as? String ?: "",
+            apkUrl = apkUrl,
+            releaseNotes = data["releaseNotes"] as? String ?: "",
+            mandatory = data["mandatory"] as? Boolean ?: false
+        )
+    }
+
+    private fun fetchFromGitHub(): AppUpdateInfo? {
+        val repo = "yassinmo199199-glitch/SmartAccountantPro"
+
+        // Check raw update JSON first if present
+        try {
+            val rawUrl = java.net.URL("https://raw.githubusercontent.com/$repo/main/ota_update.json")
+            val conn = rawUrl.openConnection() as java.net.HttpURLConnection
+            conn.connectTimeout = 4000
+            conn.readTimeout = 4000
+            conn.setRequestProperty("User-Agent", "SmartAccountantPro-OTA")
+            if (conn.responseCode == 200) {
+                val text = conn.inputStream.bufferedReader().use { it.readText() }
+                val json = org.json.JSONObject(text)
+                val code = json.optInt("versionCode", 0)
+                val name = json.optString("versionName", "")
+                val apkUrl = json.optString("apkUrl", "")
+                val notes = json.optString("releaseNotes", "")
+                val mandatory = json.optBoolean("mandatory", false)
+
+                if (code > BuildConfig.VERSION_CODE && apkUrl.isNotBlank()) {
+                    return AppUpdateInfo(
+                        versionCode = code,
+                        versionName = name,
+                        apkUrl = apkUrl,
+                        releaseNotes = notes,
+                        mandatory = mandatory
+                    )
+                }
+            }
+        } catch (_: Exception) {}
+
+        // Check GitHub Releases API (/releases/latest)
+        try {
+            val apiUrl = java.net.URL("https://api.github.com/repos/$repo/releases/latest")
+            val conn = apiUrl.openConnection() as java.net.HttpURLConnection
+            conn.connectTimeout = 5000
+            conn.readTimeout = 5000
+            conn.setRequestProperty("User-Agent", "SmartAccountantPro-OTA")
+            if (conn.responseCode == 200) {
+                val text = conn.inputStream.bufferedReader().use { it.readText() }
+                val json = org.json.JSONObject(text)
+                val tagName = json.optString("tag_name", "").removePrefix("v").trim()
+                val body = json.optString("body", "")
+                val assets = json.optJSONArray("assets")
+
+                var downloadUrl = ""
+                if (assets != null) {
+                    for (i in 0 until assets.length()) {
+                        val asset = assets.getJSONObject(i)
+                        val assetName = asset.optString("name", "")
+                        if (assetName.endsWith(".apk", ignoreCase = true)) {
+                            downloadUrl = asset.optString("browser_download_url", "")
+                            break
+                        }
+                    }
+                }
+
+                if (downloadUrl.isNotBlank()) {
+                    val codeFromTag = tagName.filter { it.isDigit() }.toIntOrNull() ?: 0
+                    val isNewer = (codeFromTag > BuildConfig.VERSION_CODE) ||
+                            (tagName.isNotBlank() && tagName != BuildConfig.VERSION_NAME)
+
+                    if (isNewer) {
+                        return AppUpdateInfo(
+                            versionCode = if (codeFromTag > 0) codeFromTag else BuildConfig.VERSION_CODE + 1,
+                            versionName = if (tagName.isNotBlank()) tagName else "2.2.1",
+                            apkUrl = downloadUrl,
+                            releaseNotes = body.ifBlank { "تحديث جديد متوفر للتحميل المباشر" },
+                            mandatory = false
+                        )
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+
+        return null
+    }
+
+    companion object {
+        private const val PREFS = "app_update_prefs"
+        private const val KEY_DOWNLOAD_ID = "pending_download_id"
+        private const val KEY_FILE_NAME = "pending_file_name"
+        private const val KEY_VERSION_NAME = "pending_version_name"
+        private const val CHANNEL_ID = "app_updates"
+        private const val NOTIFICATION_ID = 1001
+
+        fun startDownload(context: Context, info: AppUpdateInfo): Long? {
+            val fileName = "smart-accountant-${info.versionCode}.apk"
+            val request = DownloadManager.Request(Uri.parse(info.apkUrl))
+                .setTitle("تحديث ${info.versionName.ifBlank { info.versionCode.toString() }}")
+                .setDescription("جاري تنزيل تحديث التطبيق")
+                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                .setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, fileName)
+                .setMimeType("application/vnd.android.package-archive")
+                .setAllowedOverMetered(true)
+            val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager ?: return null
+            val id = dm.enqueue(request)
+            savePendingDownload(context, id, fileName, info.versionName)
+            return id
+        }
+
+        fun downloadStatus(context: Context, downloadId: Long): Int {
+            val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager ?: return -1
+            val query = DownloadManager.Query().setFilterById(downloadId)
+            dm.query(query).use { cursor ->
+                if (!cursor.moveToFirst()) return -1
+                val idx = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
+                return if (idx >= 0) cursor.getInt(idx) else -1
+            }
+        }
+
+        fun downloadedFile(context: Context, downloadId: Long): File? {
+            val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager
+            if (dm != null) {
+                val query = DownloadManager.Query().setFilterById(downloadId)
+                dm.query(query).use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val statusIdx = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
+                        val uriIdx = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
+                        val status = if (statusIdx >= 0) cursor.getInt(statusIdx) else -1
+                        val localUri = if (uriIdx >= 0) cursor.getString(uriIdx) else null
+                        if (status == DownloadManager.STATUS_SUCCESSFUL && !localUri.isNullOrBlank()) {
+                            if (localUri.startsWith("file://")) {
+                                val file = File(Uri.parse(localUri).path ?: return@use null)
+                                if (file.exists()) return file
+                            }
+                        }
+                    }
+                }
+            }
+            val name = prefs(context).getString(KEY_FILE_NAME, null)
+            if (!name.isNullOrBlank()) {
+                val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), name)
+                if (file.exists()) return file
+            }
+            return null
+        }
+
+        fun pendingDownloadId(context: Context): Long = prefs(context).getLong(KEY_DOWNLOAD_ID, -1L)
+
+        fun pendingVersionName(context: Context): String = prefs(context).getString(KEY_VERSION_NAME, "") ?: ""
+
+        fun clearPendingDownload(context: Context) {
+            prefs(context).edit().clear().apply()
+        }
+
+        private fun savePendingDownload(context: Context, downloadId: Long, fileName: String, versionName: String) {
+            prefs(context).edit()
+                .putLong(KEY_DOWNLOAD_ID, downloadId)
+                .putString(KEY_FILE_NAME, fileName)
+                .putString(KEY_VERSION_NAME, versionName)
+                .apply()
+        }
+
+        private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+        fun notifyUpdateReady(context: Context) {
+            ensureChannel(context)
+            val launchIntent = Intent(context, MainActivity::class.java)
+                .putExtra("install_update", true)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            val pendingIntent = PendingIntent.getActivity(
+                context,
+                NOTIFICATION_ID,
+                launchIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                .setContentTitle("التحديث جاهز")
+                .setContentText("اضغط للتثبيت")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .setContentIntent(pendingIntent)
+                .build()
+            try {
+                NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
+            } catch (_: SecurityException) {
+            }
+        }
+
+        private fun ensureChannel(context: Context) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+            val channel = NotificationChannel(CHANNEL_ID, "تحديثات التطبيق", NotificationManager.IMPORTANCE_HIGH)
+            context.getSystemService(NotificationManager::class.java)?.createNotificationChannel(channel)
+        }
+
+        fun canInstallPackages(context: Context): Boolean {
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.packageManager.canRequestPackageInstalls()
+            } else true
+        }
+
+        fun openInstallPermissionSettings(context: Context) {
+            val intent = Intent(
+                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                Uri.parse("package:${context.packageName}")
+            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            try {
+                context.startActivity(intent)
+            } catch (_: Exception) {
+            }
+        }
+
+        fun installApk(context: Context, file: File?): Boolean {
+            if (file == null || !file.exists()) return false
+            if (!canInstallPackages(context)) {
+                openInstallPermissionSettings(context)
+                return false
+            }
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            val intent = Intent(Intent.ACTION_VIEW)
+                .setDataAndType(uri, "application/vnd.android.package-archive")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+            return try {
+                context.startActivity(intent)
+                true
+            } catch (_: Exception) {
+                false
+            }
+        }
+    }
+}
