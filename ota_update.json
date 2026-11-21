@@ -1,7 +1,7 @@
 {
-  "versionCode": 13,
-  "versionName": "2.4.1",
-  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v2.4.1/app-debug.apk",
-  "releaseNotes": "تفعيل خدمة الفحص التلقائي بالخلفية وإرسال الإشعارات عند وجود تحديث جديد حتى لو كان التطبيق مغلقاً.",
+  "versionCode": 14,
+  "versionName": "2.4.2",
+  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v2.4.2/app-debug.apk",
+  "releaseNotes": "إصلاح تصوير الكاميرا ومزامنة الصور المرفقة للسحاب، وتسهيل استخدام التطبيق أثناء التنزيل بالخلفية.",
   "mandatory": false
 }
