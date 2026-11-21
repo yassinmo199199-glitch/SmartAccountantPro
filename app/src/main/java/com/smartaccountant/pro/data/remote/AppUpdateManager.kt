@@ -163,7 +163,7 @@ class AppUpdateManager(
     suspend fun downloadFileDirectly(
         info: AppUpdateInfo,
         onProgress: (Int) -> Unit
-    ): File? {
+    ): Pair<File?, String> {
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             try {
                 val fileName = "smart-accountant-${info.versionCode}.apk"
@@ -173,24 +173,26 @@ class AppUpdateManager(
 
                 var currentUrl = info.apkUrl
                 var redirects = 0
-                var conn: java.net.HttpURLConnection
+                var conn: java.net.HttpURLConnection? = null
 
-                while (true) {
+                while (redirects < 8) {
                     val url = java.net.URL(currentUrl)
-                    conn = url.openConnection() as java.net.HttpURLConnection
-                    conn.connectTimeout = 10000
-                    conn.readTimeout = 15000
-                    conn.instanceFollowRedirects = true
-                    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; SmartAccountantPro)")
-                    conn.setRequestProperty("Accept", "*/*")
+                    conn = (url.openConnection() as java.net.HttpURLConnection).apply {
+                        connectTimeout = 12000
+                        readTimeout = 20000
+                        instanceFollowRedirects = false
+                        setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                        setRequestProperty("Accept", "*/*")
+                    }
 
-                    val code = conn.responseCode
-                    if (code == java.net.HttpURLConnection.HTTP_MOVED_PERM ||
-                        code == java.net.HttpURLConnection.HTTP_MOVED_TEMP ||
-                        code == 307 || code == 308) {
-                        val newUrl = conn.getHeaderField("Location")
-                        if (!newUrl.isNullOrBlank() && redirects < 5) {
-                            currentUrl = newUrl
+                    val responseCode = conn.responseCode
+                    if (responseCode in 300..399) {
+                        val location = conn.getHeaderField("Location")
+                            ?: conn.getHeaderField("location")
+                            ?: conn.headerFields.entries.find { it.key?.equals("Location", ignoreCase = true) == true }?.value?.firstOrNull()
+
+                        if (!location.isNullOrBlank()) {
+                            currentUrl = if (location.startsWith("http")) location else java.net.URL(url, location).toString()
                             redirects++
                             conn.disconnect()
                             continue
@@ -199,13 +201,16 @@ class AppUpdateManager(
                     break
                 }
 
-                if (conn.responseCode != 200) return@withContext null
+                val finalConn = conn ?: return@withContext Pair(null, "تعذر الاتصال بسيرفر التحميل")
+                if (finalConn.responseCode != 200) {
+                    return@withContext Pair(null, "رمز الخطأ من السيرفر: ${finalConn.responseCode}")
+                }
 
-                val totalLength = conn.contentLength
-                val inputStream = conn.inputStream
+                val totalLength = finalConn.contentLength.toLong()
+                val inputStream = finalConn.inputStream
                 val outputStream = java.io.FileOutputStream(destinationFile)
 
-                val buffer = ByteArray(8192)
+                val buffer = ByteArray(16384)
                 var bytesRead: Int
                 var totalRead = 0L
 
@@ -213,7 +218,7 @@ class AppUpdateManager(
                     outputStream.write(buffer, 0, bytesRead)
                     totalRead += bytesRead
                     if (totalLength > 0) {
-                        val progress = ((totalRead * 100) / totalLength).toInt()
+                        val progress = ((totalRead * 100) / totalLength).toInt().coerceIn(0, 100)
                         onProgress(progress)
                     }
                 }
@@ -221,16 +226,16 @@ class AppUpdateManager(
                 outputStream.flush()
                 outputStream.close()
                 inputStream.close()
-                conn.disconnect()
+                finalConn.disconnect()
 
                 if (destinationFile.exists() && destinationFile.length() > 0) {
-                    savePendingDownload(context, 99999L, fileName, info.versionName)
-                    return@withContext destinationFile
+                    Companion.savePendingDownload(context, 99999L, fileName, info.versionName)
+                    return@withContext Pair(destinationFile, "تم التنزيل بنجاح")
                 }
-                null
+                Pair(null, "الملف المنزل فارغ")
             } catch (e: Exception) {
                 e.printStackTrace()
-                null
+                Pair(null, "فشل التنزيل: ${e.localizedMessage ?: e.message ?: "خطأ غير معروف"}")
             }
         }
     }

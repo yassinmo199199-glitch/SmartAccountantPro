@@ -1,7 +1,7 @@
 {
-  "versionCode": 6,
-  "versionName": "2.3.2",
-  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v2.3.2/app-debug.apk",
-  "releaseNotes": "تخفيف هيدر الترحيب العلوي وإزالة التكرار، وإزالة القائمة الجانبية المربكة من أعلى الرئيسية.",
+  "versionCode": 7,
+  "versionName": "2.3.3",
+  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v2.3.3/app-debug.apk",
+  "releaseNotes": "إصلاح وتطوير تتبع التحويلات المباشرة لمعالجة تنزيل التحديثات المباشرة بدقة وعرض الأخطاء بشكل مفصل.",
   "mandatory": false
 }

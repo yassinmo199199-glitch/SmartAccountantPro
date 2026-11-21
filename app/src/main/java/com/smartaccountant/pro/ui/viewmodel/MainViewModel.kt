@@ -277,16 +277,16 @@ class MainViewModel(val container: AppContainer) : ViewModel() {
         _appUpdate.value = AppUpdateState(AppUpdateStatus.DOWNLOADING, info, "جاري تنزيل التحديث 0%")
 
         viewModelScope.launch {
-            val file = container.appUpdateManager.downloadFileDirectly(info) { progress ->
+            val (file, errorMsg) = container.appUpdateManager.downloadFileDirectly(info) { progress ->
                 _appUpdate.value = AppUpdateState(AppUpdateStatus.DOWNLOADING, info, "جاري تنزيل التحديث $progress%")
             }
 
-            if (file != null && file.exists()) {
+            if (file != null && file.exists() && file.length() > 0) {
                 _appUpdate.value = AppUpdateState(AppUpdateStatus.READY, info, "التحديث جاهز للتثبيت")
                 AppUpdateManager.notifyUpdateReady(container.appContext)
                 AppUpdateManager.installApk(container.appContext, file)
             } else {
-                _appUpdate.value = AppUpdateState(AppUpdateStatus.ERROR, info, "فشل تنزيل ملف التحديث")
+                _appUpdate.value = AppUpdateState(AppUpdateStatus.ERROR, info, errorMsg.ifBlank { "فشل تنزيل ملف التحديث" })
             }
         }
     }
