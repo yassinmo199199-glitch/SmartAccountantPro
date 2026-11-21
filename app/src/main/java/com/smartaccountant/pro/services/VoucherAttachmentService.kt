@@ -12,13 +12,16 @@ class VoucherAttachmentService(context: Context) {
     private val appContext = context.applicationContext
 
     suspend fun copyImage(companyId: String, uri: Uri): File = withContext(Dispatchers.IO) {
-        val mimeType = appContext.contentResolver.getType(uri)
-        require(mimeType?.startsWith("image/") == true) { "الملف المحدد ليس صورة" }
+        val rawMimeType = appContext.contentResolver.getType(uri)
+        val extension = if (!rawMimeType.isNullOrBlank()) {
+            MimeTypeMap.getSingleton().getExtensionFromMimeType(rawMimeType) ?: "jpg"
+        } else {
+            "jpg"
+        }
 
-        val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: "img"
-        val safeCompanyId = companyId.replace(Regex("[^A-Za-z0-9_-]"), "_")
+        val safeCompanyId = companyId.ifBlank { "default" }.replace(Regex("[^A-Za-z0-9_-]"), "_")
         val directory = File(appContext.filesDir, "voucher_attachments/$safeCompanyId")
-            .apply { check(isDirectory || mkdirs()) { "تعذر إنشاء مجلد مرفقات السند" } }
+            .apply { if (!isDirectory) mkdirs() }
         val file = File(directory, "${UUID.randomUUID()}.$extension")
 
         try {

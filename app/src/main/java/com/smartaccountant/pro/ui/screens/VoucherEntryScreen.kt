@@ -152,13 +152,18 @@ fun VoucherEntryScreen(
     }
 
     fun launchCameraCapture() {
-        val dir = File(context.filesDir, "attachments").apply { if (!isDirectory) mkdirs() }
-        val file = File(dir, "voucher_cam_${System.currentTimeMillis()}.jpg")
-        val uri = androidx.core.content.FileProvider.getUriForFile(
-            context, "${context.packageName}.fileprovider", file
-        )
-        pendingCameraUri = uri
-        cameraLauncher.launch(uri)
+        try {
+            val safeCompanyId = companyId.ifBlank { "default" }.replace(Regex("[^A-Za-z0-9_-]"), "_")
+            val dir = File(context.filesDir, "voucher_attachments/$safeCompanyId").apply { if (!isDirectory) mkdirs() }
+            val file = File(dir, "cam_${System.currentTimeMillis()}.jpg")
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                context, "${context.packageName}.fileprovider", file
+            )
+            pendingCameraUri = uri
+            cameraLauncher.launch(uri)
+        } catch (e: Exception) {
+            mainViewModel.showError(e, "فشل فتح الكاميرا")
+        }
     }
 
     var editingVoucher by remember { mutableStateOf<VoucherEntity?>(null) }

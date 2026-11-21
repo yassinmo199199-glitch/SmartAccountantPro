@@ -290,6 +290,31 @@ class AppUpdateManager(
 
         private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
+        fun notifyNewUpdateAvailable(context: Context, info: AppUpdateInfo) {
+            ensureChannel(context)
+            val launchIntent = Intent(context, MainActivity::class.java)
+                .putExtra("check_update", true)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            val pendingIntent = PendingIntent.getActivity(
+                context,
+                NOTIFICATION_ID,
+                launchIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.stat_sys_download)
+                .setContentTitle("تحديث جديد متوفر: ${info.versionName}")
+                .setContentText("يتوفر إصدار جديد للتطبيق بخصائص ومميزات جديدة. اضغط للتحديث المباشر.")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .setContentIntent(pendingIntent)
+                .build()
+            try {
+                NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
+            } catch (_: SecurityException) {
+            }
+        }
+
         fun notifyUpdateReady(context: Context) {
             ensureChannel(context)
             val launchIntent = Intent(context, MainActivity::class.java)

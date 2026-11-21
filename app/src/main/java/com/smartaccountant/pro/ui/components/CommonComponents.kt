@@ -395,3 +395,58 @@ fun SyncStatusDot(status: SyncStatus?, modifier: Modifier = Modifier) {
             .semantics { contentDescription = description }
     )
 }
+
+/** بطاقة فخمة بإطارات صقيلة وظلال ناعمة */
+@Composable
+fun LuxuryCard(
+    modifier: Modifier = Modifier,
+    cornerRadius: androidx.compose.ui.unit.Dp = 18.dp,
+    borderColor: Color = Color(0xFFE2E8F0),
+    containerColor: Color = MaterialTheme.colorScheme.surface,
+    elevation: androidx.compose.ui.unit.Dp = 2.dp,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(cornerRadius),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = elevation),
+        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), content = content)
+    }
+}
+
+/** زر فخم بانحناء دائري وتدرج خفيف */
+@Composable
+fun LuxuryButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    containerColor: Color = MaterialTheme.colorScheme.primary,
+    contentColor: Color = Color.White,
+    icon: ImageVector? = null,
+    text: String
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.height(48.dp),
+        shape = RoundedCornerShape(14.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = containerColor,
+            contentColor = contentColor
+        ),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            icon?.let {
+                Icon(it, contentDescription = null, modifier = Modifier.size(18.dp))
+            }
+            Text(text, fontWeight = FontWeight.Bold, fontSize = androidx.compose.ui.unit.TextUnit.Unspecified)
+        }
+    }
+}

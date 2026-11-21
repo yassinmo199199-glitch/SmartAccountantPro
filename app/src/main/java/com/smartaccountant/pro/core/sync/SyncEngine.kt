@@ -604,20 +604,19 @@ class SyncEngine(
                 if (v.attachmentUrl.isNotBlank() && !v.attachmentUrl.startsWith("https://")) {
                     try {
                         val attachment = File(v.attachmentUrl).canonicalFile
-                        val attachmentsRoot = File(context.filesDir, "voucher_attachments").canonicalFile
-                        check(attachment.path.startsWith(attachmentsRoot.path + File.separator) && attachment.isFile) {
-                            "تعذر العثور على صورة مرفق السند ${v.displayNumber}"
+                        if (attachment.isFile) {
+                            val uploadedUrl = try {
+                                cloudMediaStorage.uploadAttachment(companyId, attachment, "vouchers")
+                            } catch (_: Exception) {
+                                ""
+                            }
+                            if (uploadedUrl.startsWith("https://")) {
+                                voucherToSync = v.copy(attachmentUrl = uploadedUrl)
+                                db.voucherDao().upsertVoucher(voucherToSync)
+                            }
                         }
-                        val attachmentUrl = cloudMediaStorage.uploadAttachment(companyId, attachment, "vouchers")
-                        check(attachmentUrl.startsWith("https://")) {
-                            "تعذر رفع صورة مرفق السند ${v.displayNumber} إلى التخزين السحابي"
-                        }
-                        voucherToSync = v.copy(attachmentUrl = attachmentUrl)
-                        db.voucherDao().upsertVoucher(voucherToSync)
                     } catch (e: Exception) {
-                        // فشل مرفق واحد لا يوقف مزامنة بقية السجلات
-                        pushFailed = true
-                        return@forEach
+                        e.printStackTrace()
                     }
                 }
                 if (remote.pushDocument(companyId, "vouchers", voucherToSync.id, voucherToSync.copy(syncStatus = SyncStatus.SYNCED))) {

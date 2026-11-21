@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import com.smartaccountant.pro.data.remote.OtaCheckWorker
 
 class SmartAccountantApp : Application() {
     lateinit var container: AppContainer
@@ -14,6 +15,7 @@ class SmartAccountantApp : Application() {
         super.onCreate()
         installCrashHandler()
         container = AppContainer(this)
+        OtaCheckWorker.schedulePeriodicCheck(this)
     }
 
     private fun installCrashHandler() {

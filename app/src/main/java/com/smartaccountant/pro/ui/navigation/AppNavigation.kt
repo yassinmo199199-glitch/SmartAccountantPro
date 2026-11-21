@@ -14,6 +14,10 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +32,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -372,20 +378,35 @@ private fun AppUpdateDialog(mainViewModel: MainViewModel) {
                 { TextButton(onClick = { mainViewModel.dismissAppUpdate() }) { Text("لاحقاً") } }
             }
         )
-        AppUpdateStatus.DOWNLOADING -> AlertDialog(
-            onDismissRequest = {},
-            title = { Text("جاري تنزيل التحديث") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                    Text(
-                        if (update.message.isNotBlank()) update.message else "يتم تنزيل التحديث في الخلفية...",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+        AppUpdateStatus.DOWNLOADING -> {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+                colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 6.dp)
+            ) {
+                androidx.compose.foundation.layout.Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.5.dp)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("جاري تنزيل التحديث في الخلفية...", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text(
+                            if (update.message.isNotBlank()) update.message else "يمكنك الاستمرار في استخدام التطبيق بحرية",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    TextButton(onClick = { mainViewModel.dismissAppUpdate() }) {
+                        Text("إخفاء", fontSize = 12.sp)
+                    }
                 }
-            },
-            confirmButton = {}
-        )
+            }
+        }
         AppUpdateStatus.READY -> AlertDialog(
             onDismissRequest = { if (!mandatory) mainViewModel.dismissAppUpdate() },
             title = { Text("التحديث جاهز") },
