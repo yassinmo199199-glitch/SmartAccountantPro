@@ -79,8 +79,8 @@ fun MoreScreen(
             onNavigateToAudit) { it.canViewAuditLogs },
         MoreItem("الإعدادات", "إعدادات الشركة والمزامنة", Icons.Default.Settings, Color(0xFF455A64),
             onNavigateToSettings) { it.canManageSettings },
-        MoreItem("تحديثات التطبيق (OTA)", "البحث عن إصدار جديد وتحديث التطبيق من الهواة", Icons.Default.SystemUpdate, Color(0xFF0288D1),
-            { mainViewModel.checkForAppUpdate() })
+        MoreItem("تحديثات التطبيق (OTA)", "البحث عن إصدار جديد وتحديث التطبيق مباشرة", Icons.Default.SystemUpdate, Color(0xFF0288D1),
+            { mainViewModel.checkForAppUpdate(manualCheck = true) })
     ).filter { it.visible(perms) }
 
     Scaffold(

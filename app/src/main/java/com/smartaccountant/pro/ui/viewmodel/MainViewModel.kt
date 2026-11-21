@@ -238,8 +238,11 @@ class MainViewModel(val container: AppContainer) : ViewModel() {
         }
     }
 
-    fun checkForAppUpdate() {
+    fun checkForAppUpdate(manualCheck: Boolean = false) {
         viewModelScope.launch {
+            if (manualCheck) {
+                showMessage("جاري البحث عن تحديثات جديدة...")
+            }
             val pendingId = AppUpdateManager.pendingDownloadId(container.appContext)
             if (pendingId != -1L) {
                 when (AppUpdateManager.downloadStatus(container.appContext, pendingId)) {
@@ -263,6 +266,8 @@ class MainViewModel(val container: AppContainer) : ViewModel() {
             val info = container.appUpdateManager.fetchLatest()
             if (info != null) {
                 _appUpdate.value = AppUpdateState(AppUpdateStatus.AVAILABLE, info)
+            } else if (manualCheck) {
+                showMessage("أنت تستخدم أحدث إصدار من التطبيق بالفعل (${com.smartaccountant.pro.BuildConfig.VERSION_NAME})")
             }
         }
     }

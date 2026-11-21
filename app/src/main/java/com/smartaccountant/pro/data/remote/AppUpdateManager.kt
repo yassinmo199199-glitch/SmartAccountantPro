@@ -65,45 +65,20 @@ class AppUpdateManager(
     private fun fetchFromGitHub(): AppUpdateInfo? {
         val repo = "yassinmo199199-glitch/SmartAccountantPro"
 
-        // Check raw update JSON first if present
-        try {
-            val rawUrl = java.net.URL("https://raw.githubusercontent.com/$repo/main/ota_update.json")
-            val conn = rawUrl.openConnection() as java.net.HttpURLConnection
-            conn.connectTimeout = 4000
-            conn.readTimeout = 4000
-            conn.setRequestProperty("User-Agent", "SmartAccountantPro-OTA")
-            if (conn.responseCode == 200) {
-                val text = conn.inputStream.bufferedReader().use { it.readText() }
-                val json = org.json.JSONObject(text)
-                val code = json.optInt("versionCode", 0)
-                val name = json.optString("versionName", "")
-                val apkUrl = json.optString("apkUrl", "")
-                val notes = json.optString("releaseNotes", "")
-                val mandatory = json.optBoolean("mandatory", false)
-
-                if (code > BuildConfig.VERSION_CODE && apkUrl.isNotBlank()) {
-                    return AppUpdateInfo(
-                        versionCode = code,
-                        versionName = name,
-                        apkUrl = apkUrl,
-                        releaseNotes = notes,
-                        mandatory = mandatory
-                    )
-                }
-            }
-        } catch (_: Exception) {}
-
-        // Check GitHub Releases API (/releases/latest)
+        // 1. Check GitHub Releases API (/releases/latest)
         try {
             val apiUrl = java.net.URL("https://api.github.com/repos/$repo/releases/latest")
             val conn = apiUrl.openConnection() as java.net.HttpURLConnection
-            conn.connectTimeout = 5000
-            conn.readTimeout = 5000
-            conn.setRequestProperty("User-Agent", "SmartAccountantPro-OTA")
+            conn.connectTimeout = 7000
+            conn.readTimeout = 7000
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; SmartAccountantPro)")
+            conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
+
             if (conn.responseCode == 200) {
                 val text = conn.inputStream.bufferedReader().use { it.readText() }
                 val json = org.json.JSONObject(text)
-                val tagName = json.optString("tag_name", "").removePrefix("v").trim()
+                val tagName = json.optString("tag_name", "").trim()
+                val cleanTag = tagName.removePrefix("v").trim()
                 val body = json.optString("body", "")
                 val assets = json.optJSONArray("assets")
 
@@ -120,19 +95,64 @@ class AppUpdateManager(
                 }
 
                 if (downloadUrl.isNotBlank()) {
-                    val codeFromTag = tagName.filter { it.isDigit() }.toIntOrNull() ?: 0
-                    val isNewer = (codeFromTag > BuildConfig.VERSION_CODE) ||
-                            (tagName.isNotBlank() && tagName != BuildConfig.VERSION_NAME)
+                    val currentVersionName = BuildConfig.VERSION_NAME.removePrefix("v").trim()
+                    val tagParts = cleanTag.split(".").mapNotNull { it.toIntOrNull() }
+                    val currentParts = currentVersionName.split(".").mapNotNull { it.toIntOrNull() }
+
+                    var isNewer = false
+                    if (tagParts.isNotEmpty() && currentParts.isNotEmpty()) {
+                        for (i in 0 until maxOf(tagParts.size, currentParts.size)) {
+                            val tagP = tagParts.getOrElse(i) { 0 }
+                            val curP = currentParts.getOrElse(i) { 0 }
+                            if (tagP > curP) {
+                                isNewer = true
+                                break
+                            } else if (tagP < curP) {
+                                isNewer = false
+                                break
+                            }
+                        }
+                    } else {
+                        isNewer = cleanTag != currentVersionName
+                    }
 
                     if (isNewer) {
                         return AppUpdateInfo(
-                            versionCode = if (codeFromTag > 0) codeFromTag else BuildConfig.VERSION_CODE + 1,
-                            versionName = if (tagName.isNotBlank()) tagName else "2.2.1",
+                            versionCode = BuildConfig.VERSION_CODE + 1,
+                            versionName = cleanTag,
                             apkUrl = downloadUrl,
-                            releaseNotes = body.ifBlank { "تحديث جديد متوفر للتحميل المباشر" },
+                            releaseNotes = body.ifBlank { "تحديث جديد متوفر للتحميل والتثبيت المباشر" },
                             mandatory = false
                         )
                     }
+                }
+            }
+        } catch (_: Exception) {}
+
+        // 2. Check raw update JSON config file
+        try {
+            val rawUrl = java.net.URL("https://raw.githubusercontent.com/$repo/main/ota_update.json")
+            val conn = rawUrl.openConnection() as java.net.HttpURLConnection
+            conn.connectTimeout = 5000
+            conn.readTimeout = 5000
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; SmartAccountantPro)")
+            if (conn.responseCode == 200) {
+                val text = conn.inputStream.bufferedReader().use { it.readText() }
+                val json = org.json.JSONObject(text)
+                val code = json.optInt("versionCode", 0)
+                val name = json.optString("versionName", "")
+                val apkUrl = json.optString("apkUrl", "")
+                val notes = json.optString("releaseNotes", "")
+                val mandatory = json.optBoolean("mandatory", false)
+
+                if ((code > BuildConfig.VERSION_CODE || (name.isNotBlank() && name != BuildConfig.VERSION_NAME)) && apkUrl.isNotBlank()) {
+                    return AppUpdateInfo(
+                        versionCode = if (code > 0) code else BuildConfig.VERSION_CODE + 1,
+                        versionName = name,
+                        apkUrl = apkUrl,
+                        releaseNotes = notes,
+                        mandatory = mandatory
+                    )
                 }
             }
         } catch (_: Exception) {}
