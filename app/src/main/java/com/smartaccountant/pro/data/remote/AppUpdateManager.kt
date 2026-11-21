@@ -129,34 +129,6 @@ class AppUpdateManager(
             }
         } catch (_: Exception) {}
 
-        // 2. Check raw update JSON config file
-        try {
-            val rawUrl = java.net.URL("https://raw.githubusercontent.com/$repo/main/ota_update.json")
-            val conn = rawUrl.openConnection() as java.net.HttpURLConnection
-            conn.connectTimeout = 5000
-            conn.readTimeout = 5000
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; SmartAccountantPro)")
-            if (conn.responseCode == 200) {
-                val text = conn.inputStream.bufferedReader().use { it.readText() }
-                val json = org.json.JSONObject(text)
-                val code = json.optInt("versionCode", 0)
-                val name = json.optString("versionName", "")
-                val apkUrl = json.optString("apkUrl", "")
-                val notes = json.optString("releaseNotes", "")
-                val mandatory = json.optBoolean("mandatory", false)
-
-                if ((code > BuildConfig.VERSION_CODE || (name.isNotBlank() && name != BuildConfig.VERSION_NAME)) && apkUrl.isNotBlank()) {
-                    return AppUpdateInfo(
-                        versionCode = if (code > 0) code else BuildConfig.VERSION_CODE + 1,
-                        versionName = name,
-                        apkUrl = apkUrl,
-                        releaseNotes = notes,
-                        mandatory = mandatory
-                    )
-                }
-            }
-        } catch (_: Exception) {}
-
         return null
     }
 
