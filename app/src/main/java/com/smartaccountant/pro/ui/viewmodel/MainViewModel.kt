@@ -274,19 +274,34 @@ class MainViewModel(val container: AppContainer) : ViewModel() {
 
     fun startAppUpdateDownload() {
         val info = _appUpdate.value.info ?: return
-        val downloadId = AppUpdateManager.startDownload(container.appContext, info)
-        if (downloadId == null) {
-            _appUpdate.value = AppUpdateState(AppUpdateStatus.ERROR, info, "تعذر بدء تنزيل التحديث")
-            return
+        _appUpdate.value = AppUpdateState(AppUpdateStatus.DOWNLOADING, info, "جاري تنزيل التحديث 0%")
+
+        viewModelScope.launch {
+            val file = container.appUpdateManager.downloadFileDirectly(info) { progress ->
+                _appUpdate.value = AppUpdateState(AppUpdateStatus.DOWNLOADING, info, "جاري تنزيل التحديث $progress%")
+            }
+
+            if (file != null && file.exists()) {
+                _appUpdate.value = AppUpdateState(AppUpdateStatus.READY, info, "التحديث جاهز للتثبيت")
+                AppUpdateManager.notifyUpdateReady(container.appContext)
+                AppUpdateManager.installApk(container.appContext, file)
+            } else {
+                _appUpdate.value = AppUpdateState(AppUpdateStatus.ERROR, info, "فشل تنزيل ملف التحديث")
+            }
         }
-        _appUpdate.value = AppUpdateState(AppUpdateStatus.DOWNLOADING, info)
-        viewModelScope.launch { watchAppUpdateDownload(downloadId, info) }
     }
 
     fun installAppUpdate() {
-        val pendingId = AppUpdateManager.pendingDownloadId(container.appContext)
-        if (pendingId == -1L) return
-        val file = AppUpdateManager.downloadedFile(container.appContext, pendingId)
+        val info = _appUpdate.value.info
+        val file = if (info != null) {
+            val fileName = "smart-accountant-${info.versionCode}.apk"
+            val dir = container.appContext.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS) ?: container.appContext.cacheDir
+            java.io.File(dir, fileName).takeIf { it.exists() }
+        } else {
+            val pendingId = AppUpdateManager.pendingDownloadId(container.appContext)
+            AppUpdateManager.downloadedFile(container.appContext, pendingId)
+        }
+
         if (!AppUpdateManager.installApk(container.appContext, file)) {
             showMessage("فعّل إذن تثبيت التطبيقات ثم حاول مرة أخرى")
         }

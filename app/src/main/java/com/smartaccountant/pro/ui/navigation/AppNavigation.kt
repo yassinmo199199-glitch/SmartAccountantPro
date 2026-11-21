@@ -378,7 +378,10 @@ private fun AppUpdateDialog(mainViewModel: MainViewModel) {
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                    Text("يتم تنزيل التحديث في الخلفية...", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        if (update.message.isNotBlank()) update.message else "يتم تنزيل التحديث في الخلفية...",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
             },
             confirmButton = {}

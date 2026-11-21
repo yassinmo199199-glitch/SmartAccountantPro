@@ -160,6 +160,81 @@ class AppUpdateManager(
         return null
     }
 
+    suspend fun downloadFileDirectly(
+        info: AppUpdateInfo,
+        onProgress: (Int) -> Unit
+    ): File? {
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val fileName = "smart-accountant-${info.versionCode}.apk"
+                val dir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.cacheDir
+                val destinationFile = File(dir, fileName)
+                if (destinationFile.exists()) destinationFile.delete()
+
+                var currentUrl = info.apkUrl
+                var redirects = 0
+                var conn: java.net.HttpURLConnection
+
+                while (true) {
+                    val url = java.net.URL(currentUrl)
+                    conn = url.openConnection() as java.net.HttpURLConnection
+                    conn.connectTimeout = 10000
+                    conn.readTimeout = 15000
+                    conn.instanceFollowRedirects = true
+                    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; SmartAccountantPro)")
+                    conn.setRequestProperty("Accept", "*/*")
+
+                    val code = conn.responseCode
+                    if (code == java.net.HttpURLConnection.HTTP_MOVED_PERM ||
+                        code == java.net.HttpURLConnection.HTTP_MOVED_TEMP ||
+                        code == 307 || code == 308) {
+                        val newUrl = conn.getHeaderField("Location")
+                        if (!newUrl.isNullOrBlank() && redirects < 5) {
+                            currentUrl = newUrl
+                            redirects++
+                            conn.disconnect()
+                            continue
+                        }
+                    }
+                    break
+                }
+
+                if (conn.responseCode != 200) return@withContext null
+
+                val totalLength = conn.contentLength
+                val inputStream = conn.inputStream
+                val outputStream = java.io.FileOutputStream(destinationFile)
+
+                val buffer = ByteArray(8192)
+                var bytesRead: Int
+                var totalRead = 0L
+
+                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                    outputStream.write(buffer, 0, bytesRead)
+                    totalRead += bytesRead
+                    if (totalLength > 0) {
+                        val progress = ((totalRead * 100) / totalLength).toInt()
+                        onProgress(progress)
+                    }
+                }
+
+                outputStream.flush()
+                outputStream.close()
+                inputStream.close()
+                conn.disconnect()
+
+                if (destinationFile.exists() && destinationFile.length() > 0) {
+                    savePendingDownload(context, 99999L, fileName, info.versionName)
+                    return@withContext destinationFile
+                }
+                null
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        }
+    }
+
     companion object {
         private const val PREFS = "app_update_prefs"
         private const val KEY_DOWNLOAD_ID = "pending_download_id"
