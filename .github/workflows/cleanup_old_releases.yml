@@ -5,9 +5,14 @@ on:
     types: [published]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   cleanup:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Delete Older Releases
         uses: dev-drprasad/delete-older-releases@v0.3.0
