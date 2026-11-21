@@ -1,7 +1,7 @@
 {
-  "versionCode": 11,
-  "versionName": "2.3.8",
-  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v2.3.5/app-debug.apk",
-  "releaseNotes": "اعتماد جلب روابط التنزيل الحية فقط من GitHub Releases لمنع أخطاء 404.",
+  "versionCode": 12,
+  "versionName": "2.4.0",
+  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v2.4.0/app-debug.apk",
+  "releaseNotes": "توحيد مفاتيح التوقيع الرقمي (Keystore) لتشغيل التحديثات المباشرة بنقرة واحدة كلياً.",
   "mandatory": false
 }
