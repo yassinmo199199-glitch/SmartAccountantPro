@@ -1,7 +1,7 @@
 {
-  "versionCode": 2,
-  "versionName": "2.2.1",
-  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v2.2.1/app-debug.apk",
-  "releaseNotes": "تحديث شاشة كشف الحساب الرسمية بالكامل وتطوير أزرار الطباعة الحرارية والمشاركة وإظهار كافة العمليات.",
+  "versionCode": 4,
+  "versionName": "2.2.2",
+  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v2.2.2/app-debug.apk",
+  "releaseNotes": "تحديث ترتيب أعمدة كشف الحساب الرسمية من اليمين إلى اليسار (التاريخ، نوع المستند، رقم المستند، البيان، رقم المرجع، مدين، دائن، الرصيد).",
   "mandatory": false
 }

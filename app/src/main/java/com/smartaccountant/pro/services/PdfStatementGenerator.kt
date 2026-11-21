@@ -409,18 +409,20 @@ class PdfStatementGenerator(private val context: Context) {
             style = Paint.Style.STROKE
             strokeWidth = 0.7f
         }
-        val tableWidths = listOf(68, 105, 78, 78, 84, contentWidth - 413)
-        val tableHeaders = listOf("التاريخ", "المستند", "عليه", "له", "الرصيد", "البيان")
+        val tableWidths = listOf(60, 65, 55, 120, 55, 60, 60, 72)
+        val tableHeaders = listOf("التاريخ", "نوع المستند", "رقم المستند", "البيان", "رقم المرجع", "مدين", "دائن", "الرصيد")
         var runningBalance = 0.0
         val tableRows = if (isBalanceConfirmation) emptyList() else rows.mapIndexed { index, row ->
             runningBalance += row.debit - row.credit
             listOf(
                 DateUtils.formatDate(row.dateMillis),
-                "${row.docType}\n#${row.docNumber}",
+                row.docType,
+                if (row.docNumber > 0) "#${row.docNumber}" else "—",
+                row.description.ifBlank { "—" },
+                "—",
                 if (row.debit == 0.0) "—" else CurrencyFormatter.format(row.debit),
                 if (row.credit == 0.0) "—" else CurrencyFormatter.format(row.credit),
-                CurrencyFormatter.format(if (index == rows.lastIndex) netBalance else runningBalance),
-                row.description.ifBlank { "—" }
+                CurrencyFormatter.format(if (index == rows.lastIndex) netBalance else runningBalance)
             )
         }
         val rowPaint = TextPaint(bodyPaint)

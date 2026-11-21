@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smartaccountant.pro.core.utils.CurrencyFormatter
@@ -44,6 +45,7 @@ data class StatementRowUiModel(
     val id: String,
     val dateMillis: Long,
     val docNumber: String,
+    val refNumber: String = "",
     val typeName: String,
     val description: String,
     val lineNote: String = "",
@@ -712,23 +714,30 @@ fun AccountStatementContent(
                     }
                 }
 
-                // ===== ترويسة الأعمدة المماثلة تماماً للواجهة المرجعية =====
+                // ===== ترويسة الأعمدة بالترتيب المطلوبة من اليمين إلى اليسار =====
+                // (التاريخ , نوع المستند , رقم المستند , البيان , رقم المرجع , مدين , دائن , الرصيد)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Color.Black)
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("النوع", modifier = Modifier.weight(0.8f), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
-                    Text("المبلغ", modifier = Modifier.weight(1.2f), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
-                    Text("التفاصيل", modifier = Modifier.weight(2f), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
+                    Text("التاريخ", modifier = Modifier.width(85.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
+                    Text("نوع المستند", modifier = Modifier.width(90.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
+                    Text("رقم المستند", modifier = Modifier.width(80.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
+                    Text("البيان", modifier = Modifier.width(130.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
+                    Text("رقم المرجع", modifier = Modifier.width(75.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
+                    Text("مدين", modifier = Modifier.width(75.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
+                    Text("دائن", modifier = Modifier.width(75.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
                     if (showRunningBalance) {
-                        Text("الرصيد", modifier = Modifier.weight(1.2f), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
+                        Text("الرصيد", modifier = Modifier.width(90.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
                     }
+                    Text("إجراءات", modifier = Modifier.width(85.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
                 }
 
-                // ===== قائمة حركات الكشف بنفس تصميم الصورة المرجعية بالضبط =====
+                // ===== قائمة حركات الكشف =====
                 if (statementRows.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
                         Text("لا توجد حركات مسجلة لهذا الحساب", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -743,108 +752,118 @@ fun AccountStatementContent(
                                         if (row.isInvoice) onNavigateToInvoice(row.id)
                                         else onNavigateToVoucher(row.id)
                                     }
-                                    .padding(horizontal = 12.dp, vertical = 8.dp)
                             ) {
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState())
+                                        .padding(horizontal = 10.dp, vertical = 9.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    val isDebit = row.debit > 0
+                                    // 1. التاريخ
                                     Text(
-                                        text = if (isDebit) "عليه" else "له",
-                                        modifier = Modifier.weight(0.8f),
-                                        color = if (isDebit) DebitRed else CreditGreen,
+                                        text = DateUtils.formatDate(row.dateMillis),
+                                        modifier = Modifier.width(85.dp),
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF1565C0),
+                                        fontWeight = FontWeight.Medium
+                                    )
+
+                                    // 2. نوع المستند
+                                    Text(
+                                        text = row.typeName,
+                                        modifier = Modifier.width(90.dp),
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
 
-                                    val amt = if (isDebit) row.debit else row.credit
-                                    Text(
-                                        text = CurrencyFormatter.formatAmount(amt),
-                                        modifier = Modifier.weight(1.2f),
-                                        color = if (isDebit) DebitRed else CreditGreen,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp
-                                    )
-
-                                    Text(
-                                        text = row.description,
-                                        modifier = Modifier.weight(2f),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        maxLines = 2,
-                                        color = Color.Black
-                                    )
-
-                                    if (showRunningBalance) {
-                                        Text(
-                                            text = CurrencyFormatter.formatAmount(kotlin.math.abs(row.balanceAfter)),
-                                            modifier = Modifier.weight(1.2f),
-                                            color = Color(0xFF1565C0),
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 13.sp
-                                        )
-                                    }
-                                }
-
-                                Spacer(Modifier.height(4.dp))
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        IconButton(
-                                            onClick = {
-                                                if (row.isInvoice) onNavigateToInvoice(row.id)
-                                                else onNavigateToVoucher(row.id)
-                                            },
-                                            modifier = Modifier.size(26.dp)
-                                        ) {
-                                            Icon(Icons.Default.Edit, contentDescription = "تعديل", modifier = Modifier.size(16.dp), tint = Color(0xFF1565C0))
-                                        }
-
-                                        IconButton(
-                                            onClick = {
-                                                if (row.isInvoice) onNavigateToInvoice(row.id)
-                                                else onNavigateToVoucher(row.id)
-                                            },
-                                            modifier = Modifier.size(26.dp)
-                                        ) {
-                                            Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF", modifier = Modifier.size(16.dp), tint = DebitRed)
-                                        }
-
-                                        IconButton(
-                                            onClick = {
-                                                if (row.isInvoice) onNavigateToInvoice(row.id)
-                                                else onNavigateToVoucher(row.id)
-                                            },
-                                            modifier = Modifier.size(26.dp)
-                                        ) {
-                                            Icon(Icons.Default.Share, contentDescription = "مشاركة", modifier = Modifier.size(16.dp), tint = Color(0xFF1565C0))
-                                        }
-
-                                        if (row.hasAttachment) {
-                                            Icon(Icons.Default.PhotoCamera, contentDescription = "مرفق صورة", modifier = Modifier.size(16.dp), tint = DebitRed)
-                                        }
-                                    }
-
+                                    // 3. رقم المستند
                                     Text(
                                         text = row.docNumber,
+                                        modifier = Modifier.width(80.dp),
+                                        fontSize = 11.sp,
+                                        color = DebitRed,
+                                        fontWeight = FontWeight.Bold
+                                    )
+
+                                    // 4. البيان
+                                    Text(
+                                        text = row.description,
+                                        modifier = Modifier.width(130.dp),
+                                        fontSize = 11.sp,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+
+                                    // 5. رقم المرجع
+                                    Text(
+                                        text = row.refNumber.ifBlank { "—" },
+                                        modifier = Modifier.width(75.dp),
+                                        fontSize = 11.sp,
+                                        color = Color.Gray
+                                    )
+
+                                    // 6. مدين
+                                    Text(
+                                        text = if (row.debit > 0) CurrencyFormatter.formatAmount(row.debit) else "—",
+                                        modifier = Modifier.width(75.dp),
                                         color = DebitRed,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 12.sp
                                     )
 
+                                    // 7. دائن
                                     Text(
-                                        text = DateUtils.formatDateTime(row.dateMillis),
-                                        fontSize = 10.sp,
-                                        color = Color(0xFF1565C0)
+                                        text = if (row.credit > 0) CurrencyFormatter.formatAmount(row.credit) else "—",
+                                        modifier = Modifier.width(75.dp),
+                                        color = CreditGreen,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp
                                     )
+
+                                    // 8. الرصيد
+                                    if (showRunningBalance) {
+                                        Text(
+                                            text = CurrencyFormatter.formatAmount(kotlin.math.abs(row.balanceAfter)),
+                                            modifier = Modifier.width(90.dp),
+                                            color = Color(0xFF1565C0),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+
+                                    // أزرار التحكم السريعة للسطر
+                                    Row(
+                                        modifier = Modifier.width(85.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        IconButton(
+                                            onClick = {
+                                                if (row.isInvoice) onNavigateToInvoice(row.id)
+                                                else onNavigateToVoucher(row.id)
+                                            },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Icon(Icons.Default.Edit, contentDescription = "تعديل", modifier = Modifier.size(15.dp), tint = Color(0xFF1565C0))
+                                        }
+
+                                        IconButton(
+                                            onClick = {
+                                                if (row.isInvoice) onNavigateToInvoice(row.id)
+                                                else onNavigateToVoucher(row.id)
+                                            },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF", modifier = Modifier.size(15.dp), tint = DebitRed)
+                                        if (row.hasAttachment) {
+                                            Icon(Icons.Default.PhotoCamera, contentDescription = "مرفق صورة", modifier = Modifier.size(14.dp), tint = DebitRed)
+                                        }
+                                    }
                                 }
+                                HorizontalDivider(color = Color(0xFFE2E8F0))
                             }
-                            HorizontalDivider(color = Color(0xFFE2E8F0))
                         }
                     }
                 }
@@ -929,3 +948,5 @@ fun AccountStatementContent(
         }
     }
 }
+}
+
