@@ -307,7 +307,7 @@ fun CurvedHeader(
     modifier: Modifier = Modifier,
     startColor: Color = Color(0xFF1B3A6B),
     endColor: Color = Color(0xFF0F1F38),
-    cornerRadius: androidx.compose.ui.unit.Dp = 32.dp,
+    cornerRadius: androidx.compose.ui.unit.Dp = 18.dp,
     content: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     Box(
@@ -315,19 +315,19 @@ fun CurvedHeader(
             .fillMaxWidth()
             .background(
                 brush = androidx.compose.ui.graphics.Brush.verticalGradient(listOf(startColor, endColor)),
-                shape = RoundedCornerShape(bottomStart = cornerRadius, bottomEnd = cornerRadius)
+                shape = RoundedCornerShape(cornerRadius)
             )
-            .padding(horizontal = 20.dp, vertical = 22.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 title,
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.titleLarge,
                 color = Color.White,
                 fontWeight = FontWeight.Bold
             )
-            subtitle?.let {
-                Text(it, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.75f))
+            subtitle?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f))
             }
             content?.invoke(this)
         }

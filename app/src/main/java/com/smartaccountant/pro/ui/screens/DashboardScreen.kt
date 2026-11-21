@@ -188,11 +188,6 @@ fun DashboardScreen(
                         )
                     }
                 },
-                navigationIcon = {
-                    IconButton(onClick = { showCompanyDialog = true }) {
-                        Icon(Icons.Default.Menu, contentDescription = "القائمة", tint = Color.White)
-                    }
-                },
                 actions = {
                     SyncBadge(syncState)
                     IconButton(onClick = { navController.navigate(Screen.GlobalSearch.route) }) {
@@ -262,11 +257,11 @@ fun DashboardScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 90.dp)
         ) {
-            // ===== هيدر ترحيبي بمنحنيات =====
+            // ===== هيدر ترحيبي خفيف وخالي من التكرار =====
             CurvedHeader(
                 title = "مرحباً، ${user?.fullName?.substringBefore(" ") ?: ""}",
-                subtitle = "${company?.nameAr ?: ""} • ${user?.role?.arabicTitle ?: ""}",
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                subtitle = user?.role?.arabicTitle ?: "",
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
             )
 
             // ===== تبويبات لوحة التحكم =====
