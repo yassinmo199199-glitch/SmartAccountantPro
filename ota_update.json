@@ -1,7 +1,7 @@
 {
-  "versionCode": 7,
-  "versionName": "2.3.3",
-  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v2.3.3/app-debug.apk",
-  "releaseNotes": "إصلاح وتطوير تتبع التحويلات المباشرة لمعالجة تنزيل التحديثات المباشرة بدقة وعرض الأخطاء بشكل مفصل.",
+  "versionCode": 8,
+  "versionName": "2.3.4",
+  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v2.3.4/app-debug.apk",
+  "releaseNotes": "إصلاح جذري لمسارات FileProvider وتثبيت التحديثات المباشرة بنقرة واحدة كلياً.",
   "mandatory": false
 }
