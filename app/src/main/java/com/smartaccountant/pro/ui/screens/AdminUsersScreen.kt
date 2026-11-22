@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material3.*
@@ -28,6 +29,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import com.smartaccountant.pro.data.model.UserEntity
@@ -177,18 +179,41 @@ fun AdminUsersScreen(mainViewModel: MainViewModel, onBack: () -> Unit) {
         var newPin by remember { mutableStateOf(if (isNewUser) "1234" else "") }
         var role by remember { mutableStateOf(target.role) }
         var perms by remember { mutableStateOf(target.permissions) }
+        var formErrorMsg by remember { mutableStateOf<String?>(null) }
 
         AlertDialog(
             onDismissRequest = { editingUser = null },
             title = { Text(if (isNewUser) "إضافة مستخدم جديد" else "تعديل: ${target.fullName}") },
             text = {
                 Column(modifier = Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()).imePadding(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = fullName, onValueChange = { fullName = it }, label = { Text("الاسم الكامل *") })
-                    OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("البريد الإلكتروني *") })
+                    formErrorMsg?.let { errMsg ->
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(Icons.Default.Error, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                                Text(
+                                    text = errMsg,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    OutlinedTextField(value = fullName, onValueChange = { fullName = it; formErrorMsg = null }, label = { Text("الاسم الكامل *") })
+                    OutlinedTextField(value = email, onValueChange = { email = it; formErrorMsg = null }, label = { Text("البريد الإلكتروني *") })
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("الجوال") }, modifier = Modifier.weight(1f))
+                        OutlinedTextField(value = phone, onValueChange = { phone = it; formErrorMsg = null }, label = { Text("الجوال") }, modifier = Modifier.weight(1f))
                         OutlinedTextField(
-                            value = newPin, onValueChange = { newPin = it },
+                            value = newPin, onValueChange = { newPin = it; formErrorMsg = null },
                             label = { Text(if (isNewUser) "رمز PIN *" else "PIN جديد (اختياري)") },
                             visualTransformation = PasswordVisualTransformation(),
                             modifier = Modifier.weight(1f)
@@ -297,7 +322,7 @@ fun AdminUsersScreen(mainViewModel: MainViewModel, onBack: () -> Unit) {
                 Button(onClick = {
                     val admin = adminUser ?: return@Button
                     if (fullName.isBlank() || email.isBlank() || (isNewUser && newPin.isBlank())) {
-                        mainViewModel.showMessage("يرجى إدخال الاسم والبريد ورمز PIN")
+                        formErrorMsg = "يرجى إدخال الاسم والبريد ورمز PIN"
                         return@Button
                     }
                     scope.launch {
@@ -310,7 +335,9 @@ fun AdminUsersScreen(mainViewModel: MainViewModel, onBack: () -> Unit) {
                             )
                             editingUser = null
                             mainViewModel.showMessage("تم حفظ بيانات وصلاحيات المستخدم بنجاح")
-                        } catch (e: Exception) { mainViewModel.showError(e, "تعذر حفظ المستخدم والصلاحيات") }
+                        } catch (e: Exception) {
+                            formErrorMsg = e.message ?: "تعذر حفظ بيانات وصلاحيات المستخدم"
+                        }
                     }
                 }) { Text("حفظ ومزامنة") }
             },

@@ -1,7 +1,7 @@
 {
-  "versionCode": 20,
-  "versionName": "3.1.0",
-  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v3.1.0/app-debug.apk",
-  "releaseNotes": "تحديث عالي الأمان v3.1.0 يتضمن اشتراط الاتصال بالإنترنت لإضافة الموظفين والتحقق الصارم من صحة البريد والجوال ومنع التكرار، بالإضافة لدعم الضغط المطوّل للحذف والتفاصيل.",
+  "versionCode": 21,
+  "versionName": "3.2.0",
+  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v3.2.0/app-debug.apk",
+  "releaseNotes": "إصدار v3.2.0 يتضمن ظهور أخطاء إضافة الموظفين ببطاقة حمراء واضحة داخل النافذة، واشتراط الاتصال بالإنترنت، ودعم الضغط المطول لإظهار قائمة الخيارات والحذف.",
   "mandatory": false
 }
