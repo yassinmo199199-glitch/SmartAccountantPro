@@ -27,6 +27,59 @@ class CloudMediaStorage(private val context: Context) {
         }
     }
 
+    suspend fun compressAndUploadAttachment(companyId: String, file: File, folder: String = "receipts"): String = withContext(Dispatchers.IO) {
+        if (!file.isFile || file.length() == 0L) return@withContext ""
+
+        val compressedFile = compressImageFile(file)
+
+        try {
+            val url = uploadAttachment(companyId, compressedFile, folder)
+            if (url.startsWith("https://") || url.startsWith("http://")) {
+                return@withContext url
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        try {
+            val bytes = compressedFile.readBytes()
+            if (bytes.size in 1..400_000) {
+                val b64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+                return@withContext "data:image/jpeg;base64,$b64"
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        ""
+    }
+
+    private fun compressImageFile(file: File): File {
+        return try {
+            val bitmap = android.graphics.BitmapFactory.decodeFile(file.absolutePath) ?: return file
+            val maxDim = 1280
+            val width = bitmap.width
+            val height = bitmap.height
+            val scaledBitmap = if (width > maxDim || height > maxDim) {
+                val ratio = Math.min(maxDim.toFloat() / width, maxDim.toFloat() / height)
+                val targetW = (width * ratio).toInt()
+                val targetH = (height * ratio).toInt()
+                android.graphics.Bitmap.createScaledBitmap(bitmap, targetW, targetH, true)
+            } else {
+                bitmap
+            }
+
+            val outFile = File(context.cacheDir, "comp_${file.nameWithoutExtension}.jpg")
+            val fos = java.io.FileOutputStream(outFile)
+            scaledBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 75, fos)
+            fos.flush()
+            fos.close()
+            if (outFile.exists() && outFile.length() > 0) outFile else file
+        } catch (_: Exception) {
+            file
+        }
+    }
+
     private suspend fun uploadToCloudflareR2(companyId: String, file: File, folder: String): String =
         withContext(Dispatchers.IO) {
             val objectKey = "$companyId/$folder/${UUID.randomUUID()}_${file.name}"

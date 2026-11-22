@@ -180,7 +180,7 @@ fun AppNavigation(
     NavHost(
         navController = navController,
         startDestination = Screen.Dashboard.route,
-        modifier = Modifier.padding(innerPadding).imePadding()
+        modifier = Modifier.padding(innerPadding)
     ) {
         composable(Screen.Dashboard.route) {
             DashboardScreen(mainViewModel = mainViewModel, navController = navController)

@@ -119,6 +119,11 @@ class AccountingRepository(
             )
         }
         syncEngine.scheduleBackgroundSync(finalVoucher.companyId)
+        syncEngine.triggerPushNotification(
+            companyId = finalVoucher.companyId,
+            title = "عملية قيد: ${finalVoucher.type.arabicTitle}",
+            body = "الموظف ${currentUser.fullName} — ${if (isEdit) "تعديل" else "إضافة"}: قيد يومية مركب ($dispNum)"
+        )
     }
 
     suspend fun saveVoucher(currentUser: UserEntity, voucher: VoucherEntity, isEdit: Boolean = false) {
@@ -247,6 +252,11 @@ class AccountingRepository(
             )
         }
         syncEngine.scheduleBackgroundSync(finalVoucher.companyId)
+        syncEngine.triggerPushNotification(
+            companyId = finalVoucher.companyId,
+            title = "عملية سند: ${finalVoucher.type.arabicTitle}",
+            body = "الموظف ${currentUser.fullName} — ${if (isEdit) "تعديل" else "إضافة"}: ${finalVoucher.type.arabicTitle} ($dispNum)"
+        )
     }
 
     /**
@@ -277,6 +287,11 @@ class AccountingRepository(
             )
         }
         syncEngine.scheduleBackgroundSync(voucher.companyId)
+        syncEngine.triggerPushNotification(
+            companyId = voucher.companyId,
+            title = "حذف عملية: ${voucher.type.arabicTitle}",
+            body = "الموظف ${currentUser.fullName} — حذف: ${voucher.type.arabicTitle} ($dispNum)"
+        )
     }
 
     suspend fun calculateAccountBalance(

@@ -206,7 +206,10 @@ fun AccountsScreen(
                         // إذا كان عرض الشجرة (الصفحة 0) ولا يوجد بحث، نعرض الشجرة الهرمية
                         if (page == 0 && searchQuery.isBlank()) {
                             val tree = buildAccountTree(filteredAccounts, balances)
-                            LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                                contentPadding = PaddingValues(top = 8.dp, bottom = 95.dp)
+                            ) {
                                 items(tree) { node ->
                                     AccountTreeNodeUI(
                                         node = node,
@@ -224,7 +227,10 @@ fun AccountsScreen(
                             }
                         } else {
                             // عرض قائمة مسطحة مبسطة (بحث أو تبويب عملاء/موردين)
-                            LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                                contentPadding = PaddingValues(top = 8.dp, bottom = 95.dp)
+                            ) {
                                 items(filteredAccounts) { acc ->
                                     val bal = balances[acc.id] ?: 0.0
                                     Card(
@@ -256,16 +262,17 @@ fun AccountsScreen(
                                                 Text(acc.category.arabicTitle, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                                             }
                                             Column(horizontalAlignment = Alignment.End) {
+                                                val balText = if (kotlin.math.abs(bal) < 0.001) "-" else CurrencyFormatter.formatAmount(kotlin.math.abs(bal))
                                                 Text(
-                                                    CurrencyFormatter.formatAmount(kotlin.math.abs(bal)),
-                                                    fontWeight = FontWeight.Bold,
+                                                    text = balText,
+                                                    fontWeight = if (bal != 0.0) FontWeight.Bold else FontWeight.Normal,
                                                     fontSize = 15.sp,
-                                                    color = if (bal > 0) DebitRed else if (bal < 0) CreditGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                                                    color = if (bal > 0) DebitRed else if (bal < 0) CreditGreen else MaterialTheme.colorScheme.outline
                                                 )
                                                 Text(
                                                     if (bal > 0) "مدين" else if (bal < 0) "دائن" else "مصفر",
                                                     fontSize = 10.sp,
-                                                    color = if (bal > 0) DebitRed else if (bal < 0) CreditGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                                                    color = if (bal > 0) DebitRed else if (bal < 0) CreditGreen else MaterialTheme.colorScheme.outline
                                                 )
                                             }
                                         }
@@ -345,11 +352,12 @@ fun AccountTreeNodeUI(
                 Text(node.account.name, fontWeight = if (level == 0) FontWeight.Bold else FontWeight.Medium, fontSize = 14.sp)
             }
 
+            val balText = if (kotlin.math.abs(node.balance) < 0.001) "-" else CurrencyFormatter.formatAmount(kotlin.math.abs(node.balance))
             Text(
-                CurrencyFormatter.formatAmount(kotlin.math.abs(node.balance)),
-                fontWeight = FontWeight.Bold,
+                text = balText,
+                fontWeight = if (node.balance != 0.0) FontWeight.Bold else FontWeight.Normal,
                 fontSize = 13.sp,
-                color = if (node.balance > 0) DebitRed else if (node.balance < 0) CreditGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (node.balance > 0) DebitRed else if (node.balance < 0) CreditGreen else MaterialTheme.colorScheme.outline
             )
         }
 

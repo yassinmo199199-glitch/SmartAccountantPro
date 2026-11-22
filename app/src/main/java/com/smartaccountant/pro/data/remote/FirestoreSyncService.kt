@@ -164,6 +164,24 @@ class FirestoreSyncService(
         }
     }
 
+    /** مستمع للشركة نفسها لمزامنة الاسم والبيانات مع كل الأجهزة مباشرة */
+    fun <T> listenCompanyDocument(companyId: String, clazz: Class<T>, onUpdate: (T?) -> Unit): ListenerRegistration? {
+        val cid = resolveCompanyId(companyId) ?: return null
+        return try {
+            if (!isFirebaseConfigured()) return null
+            com.google.firebase.firestore.FirebaseFirestore.getInstance().collection("companies").document(cid).addSnapshotListener { snap, err ->
+                if (err != null || snap == null || !snap.exists()) return@addSnapshotListener
+                try {
+                    val obj = gson.fromJson(gson.toJson(snap.data), clazz)
+                    onUpdate(obj)
+                } catch (_: Exception) {
+                }
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     /** جلب وثيقة الشركة نفسها من companies/{companyId} */
     suspend fun <T> getCompanyDocument(companyId: String, clazz: Class<T>): T? {
         val cid = resolveCompanyId(companyId) ?: return null

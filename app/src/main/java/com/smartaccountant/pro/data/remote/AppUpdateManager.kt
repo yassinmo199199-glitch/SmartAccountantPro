@@ -141,7 +141,14 @@ class AppUpdateManager(
                 val fileName = "smart-accountant-${info.versionCode}.apk"
                 val dir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.cacheDir
                 val destinationFile = File(dir, fileName)
-                if (destinationFile.exists()) destinationFile.delete()
+
+                if (destinationFile.exists() && destinationFile.length() > 1000000L) {
+                    Companion.savePendingDownload(context, 99999L, fileName, info.versionName)
+                    return@withContext Pair(destinationFile, "تم التنزيل بنجاح")
+                }
+
+                val tempFile = File(dir, "$fileName.tmp")
+                if (tempFile.exists()) tempFile.delete()
 
                 var currentUrl = info.apkUrl
                 var redirects = 0
@@ -150,10 +157,10 @@ class AppUpdateManager(
                 while (redirects < 8) {
                     val url = java.net.URL(currentUrl)
                     conn = (url.openConnection() as java.net.HttpURLConnection).apply {
-                        connectTimeout = 12000
-                        readTimeout = 20000
+                        connectTimeout = 15000
+                        readTimeout = 30000
                         instanceFollowRedirects = false
-                        setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                        setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile)")
                         setRequestProperty("Accept", "*/*")
                     }
 
@@ -178,11 +185,11 @@ class AppUpdateManager(
                     return@withContext Pair(null, "رمز الخطأ من السيرفر: ${finalConn.responseCode}")
                 }
 
-                val totalLength = finalConn.contentLength.toLong()
+                val totalLength = finalConn.contentLengthLong.takeIf { it > 0 } ?: finalConn.contentLength.toLong()
                 val inputStream = finalConn.inputStream
-                val outputStream = java.io.FileOutputStream(destinationFile)
+                val outputStream = java.io.FileOutputStream(tempFile)
 
-                val buffer = ByteArray(16384)
+                val buffer = ByteArray(32768)
                 var bytesRead: Int
                 var totalRead = 0L
 
@@ -200,14 +207,16 @@ class AppUpdateManager(
                 inputStream.close()
                 finalConn.disconnect()
 
-                if (destinationFile.exists() && destinationFile.length() > 0) {
+                if (tempFile.exists() && tempFile.length() > 500000L) {
+                    if (destinationFile.exists()) destinationFile.delete()
+                    tempFile.renameTo(destinationFile)
                     Companion.savePendingDownload(context, 99999L, fileName, info.versionName)
                     return@withContext Pair(destinationFile, "تم التنزيل بنجاح")
                 }
-                Pair(null, "الملف المنزل فارغ")
+                Pair(null, "الملف المنزل غير مكتمل أو فارغ")
             } catch (e: Exception) {
                 e.printStackTrace()
-                Pair(null, "فشل التنزيل: ${e.localizedMessage ?: e.message ?: "خطأ غير معروف"}")
+                Pair(null, "فشل التنزيل: ${e.localizedMessage ?: e.message ?: "خطأ في الاتصال"}")
             }
         }
     }

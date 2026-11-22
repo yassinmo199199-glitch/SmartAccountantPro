@@ -387,32 +387,48 @@ fun VoucherDetailsScreen(
             if (v.attachmentUrl.isNotBlank()) {
                 Text("المرفقات والصور:", fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.padding(start = 4.dp, top = 4.dp))
                 Card(
-                    modifier = Modifier.fillMaxWidth().height(200.dp),
+                    modifier = Modifier.fillMaxWidth().height(220.dp),
                     shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                 ) {
-                    val isRemote = v.attachmentUrl.startsWith("http")
-                    AsyncImage(
-                        model = if (isRemote) v.attachmentUrl else File(v.attachmentUrl),
-                        contentDescription = "صورة المرفق",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clickable {
-                                try {
-                                    val intent = Intent(Intent.ACTION_VIEW)
-                                    val uri = if (isRemote) Uri.parse(v.attachmentUrl)
-                                    else androidx.core.content.FileProvider.getUriForFile(
-                                        context, "${context.packageName}.fileprovider", File(v.attachmentUrl)
-                                    )
-                                    intent.setDataAndType(uri, "image/*")
-                                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
-                                    mainViewModel.showMessage("لا يوجد تطبيق لفتح الصورة")
-                                }
-                            },
-                        contentScale = ContentScale.Crop
-                    )
+                    val url = v.attachmentUrl
+                    val isRemoteOrBase64 = url.startsWith("http") || url.startsWith("data:")
+                    val localFileExists = !isRemoteOrBase64 && File(url).exists()
+
+                    if (isRemoteOrBase64 || localFileExists) {
+                        AsyncImage(
+                            model = if (isRemoteOrBase64) url else File(url),
+                            contentDescription = "صورة المرفق",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clickable {
+                                    try {
+                                        val intent = Intent(Intent.ACTION_VIEW)
+                                        val uri = if (isRemoteOrBase64) Uri.parse(url)
+                                        else androidx.core.content.FileProvider.getUriForFile(
+                                            context, "${context.packageName}.fileprovider", File(url)
+                                        )
+                                        intent.setDataAndType(uri, "image/*")
+                                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        mainViewModel.showMessage("لا يوجد تطبيق لفتح الصورة")
+                                    }
+                                },
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                Spacer(Modifier.height(8.dp))
+                                Text("جاري مزامنة صورة المرفق من السحابة...", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
                 }
             }
 

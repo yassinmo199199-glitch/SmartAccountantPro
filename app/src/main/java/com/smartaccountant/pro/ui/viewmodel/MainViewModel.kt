@@ -282,22 +282,7 @@ class MainViewModel(val container: AppContainer) : ViewModel() {
     fun startAppUpdateDownload() {
         val info = _appUpdate.value.info ?: return
         _appUpdate.value = AppUpdateState(AppUpdateStatus.DOWNLOADING, info, "جاري تنزيل التحديث في الخلفية...")
-
         com.smartaccountant.pro.data.remote.OtaDownloadWorker.enqueueDownload(container.appContext, info)
-
-        viewModelScope.launch {
-            val (file, errorMsg) = container.appUpdateManager.downloadFileDirectly(info) { progress ->
-                _appUpdate.value = AppUpdateState(AppUpdateStatus.DOWNLOADING, info, "جاري تنزيل التحديث $progress%")
-            }
-
-            if (file != null && file.exists() && file.length() > 0) {
-                _appUpdate.value = AppUpdateState(AppUpdateStatus.READY, info, "التحديث جاهز للتثبيت")
-                AppUpdateManager.notifyUpdateReady(container.appContext)
-                AppUpdateManager.installApk(container.appContext, file)
-            } else {
-                _appUpdate.value = AppUpdateState(AppUpdateStatus.ERROR, info, errorMsg.ifBlank { "فشل تنزيل ملف التحديث" })
-            }
-        }
     }
 
     fun installAppUpdate() {

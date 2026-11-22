@@ -206,6 +206,41 @@ class SyncEngine(
             // مزامنة تلقائية كل 10 ثوانٍ ما دام التطبيق مفتوحاً ومتصلاً
             startAutoSyncLoop(companyId)
 
+            // 0. Company Entity (مستمع فوري لكائن وثيقة الشركة لمزامنة تغيير اسم الشركة والشعار مع كل الأجهزة)
+            remote.listenCompanyDocument(companyId, CompanyEntity::class.java) { updatedCompany ->
+                if (updatedCompany != null) {
+                    scope.launch {
+                        db.companyDao().upsert(updatedCompany.copy(syncStatus = SyncStatus.SYNCED))
+                    }
+                }
+            }?.let { listeners.add(it) }
+
+            // 0.1 Push Notifications (مستمع الإشعارات الفورية للعمليات الصادرة من أجهزة الموظفين الآخرين)
+            remote.listenCollection(companyId, "push_notifications", Map::class.java) { items ->
+                val prefs = context.getSharedPreferences("sync_engine_prefs", Context.MODE_PRIVATE)
+                val lastNotifiedTime = prefs.getLong("last_notified_push_$companyId", 0L)
+                var maxTime = lastNotifiedTime
+
+                items.forEach { notifMap ->
+                    val title = notifMap["title"] as? String ?: return@forEach
+                    val body = notifMap["body"] as? String ?: return@forEach
+                    val senderDevice = notifMap["senderDevice"] as? String ?: ""
+                    val time = (notifMap["timestamp"] as? Number)?.toLong() ?: 0L
+
+                    if (senderDevice != deviceName && time > lastNotifiedTime) {
+                        if (time > maxTime) maxTime = time
+                        showRealtimeNotification(
+                            title = title,
+                            body = body,
+                            notificationId = (time % 100000).toInt()
+                        )
+                    }
+                }
+                if (maxTime > lastNotifiedTime) {
+                    prefs.edit().putLong("last_notified_push_$companyId", maxTime).apply()
+                }
+            }?.let { listeners.add(it) }
+
             // 1. Users
             remote.listenCollection(companyId, "users", UserEntity::class.java) { items ->
                 scope.launch {
@@ -424,7 +459,11 @@ class SyncEngine(
     suspend fun pullRemoteOperationsAndNotify(companyId: String) {
         if (companyId.isBlank()) return
         val prefs = context.getSharedPreferences("sync_engine_bg_prefs", Context.MODE_PRIVATE)
-        val lastNotifiedTime = prefs.getLong("last_notified_bg_log_time_$companyId", System.currentTimeMillis() - (12 * 3600 * 1000L))
+        var lastNotifiedTime = prefs.getLong("last_notified_bg_log_time_$companyId", 0L)
+        if (lastNotifiedTime == 0L) {
+            lastNotifiedTime = System.currentTimeMillis() - (60 * 1000L)
+            prefs.edit().putLong("last_notified_bg_log_time_$companyId", lastNotifiedTime).apply()
+        }
 
         try {
             val logs = remote.fetchCollectionSince(companyId, "audit_logs", AuditLogEntity::class.java, lastNotifiedTime)
@@ -464,6 +503,23 @@ class SyncEngine(
             }
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    fun triggerPushNotification(companyId: String, title: String, body: String) {
+        if (!remote.isFirebaseConfigured()) return
+        scope.launch(Dispatchers.IO) {
+            try {
+                val notifData = mapOf(
+                    "title" to title,
+                    "body" to body,
+                    "senderDevice" to deviceName,
+                    "timestamp" to System.currentTimeMillis()
+                )
+                remote.pushDocument(companyId, "push_notifications", java.util.UUID.randomUUID().toString(), notifData)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -648,16 +704,12 @@ class SyncEngine(
             }
             pendingVouchers.filter { it.syncStatus != SyncStatus.CONFLICT }.forEach { v ->
                 var voucherToSync = v
-                if (v.attachmentUrl.isNotBlank() && !v.attachmentUrl.startsWith("https://")) {
+                if (v.attachmentUrl.isNotBlank() && !v.attachmentUrl.startsWith("https://") && !v.attachmentUrl.startsWith("http://") && !v.attachmentUrl.startsWith("data:")) {
                     try {
                         val attachment = File(v.attachmentUrl).canonicalFile
                         if (attachment.isFile) {
-                            val uploadedUrl = try {
-                                cloudMediaStorage.uploadAttachment(companyId, attachment, "vouchers")
-                            } catch (_: Exception) {
-                                ""
-                            }
-                            if (uploadedUrl.startsWith("https://")) {
+                            val uploadedUrl = cloudMediaStorage.compressAndUploadAttachment(companyId, attachment, "vouchers")
+                            if (uploadedUrl.isNotBlank()) {
                                 voucherToSync = v.copy(attachmentUrl = uploadedUrl)
                                 db.voucherDao().upsertVoucher(voucherToSync)
                             }
@@ -681,8 +733,23 @@ class SyncEngine(
                 } else pushFailed = true
             }
             pendingInvoices.filter { it.syncStatus != SyncStatus.CONFLICT }.forEach { inv ->
-                if (remote.pushDocument(companyId, "invoices", inv.id, inv.copy(syncStatus = SyncStatus.SYNCED))) {
-                    db.invoiceDao().upsertInvoice(inv.copy(syncStatus = SyncStatus.SYNCED))
+                var invoiceToSync = inv
+                if (inv.attachmentUrl.isNotBlank() && !inv.attachmentUrl.startsWith("https://") && !inv.attachmentUrl.startsWith("http://") && !inv.attachmentUrl.startsWith("data:")) {
+                    try {
+                        val attachment = File(inv.attachmentUrl).canonicalFile
+                        if (attachment.isFile) {
+                            val uploadedUrl = cloudMediaStorage.compressAndUploadAttachment(companyId, attachment, "invoices")
+                            if (uploadedUrl.isNotBlank()) {
+                                invoiceToSync = inv.copy(attachmentUrl = uploadedUrl)
+                                db.invoiceDao().upsertInvoice(invoiceToSync)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+                if (remote.pushDocument(companyId, "invoices", invoiceToSync.id, invoiceToSync.copy(syncStatus = SyncStatus.SYNCED))) {
+                    db.invoiceDao().upsertInvoice(invoiceToSync.copy(syncStatus = SyncStatus.SYNCED))
                 } else pushFailed = true
             }
             pendingInvoiceItems.forEach { item ->
