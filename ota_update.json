@@ -1,7 +1,7 @@
 {
-  "versionCode": 18,
-  "versionName": "2.9.0",
-  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v2.9.0/app-debug.apk",
-  "releaseNotes": "تنسيق واستمرار تنزيل التحديث بـ الخلفية عبر WorkManager حتى لو تم إغلاق التطبيق كلياً.",
+  "versionCode": 19,
+  "versionName": "3.0.0",
+  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v3.0.0/app-debug.apk",
+  "releaseNotes": "إصدار فخم ومطور v3.0.0 يتضمن تجديد تصميم الرئيسية، إزالة التكرار، ودعم الألوان المتميزة لأزرار العمليات السريعة.",
   "mandatory": false
 }

@@ -157,22 +157,22 @@ fun DashboardScreen(
 
     val quickRows = listOf(
         listOf(
-            QuickAction("سند جديد", Icons.Default.Description, Color.Black, Screen.VoucherEntry.createRoute(VoucherType.RECEIPT.name)),
-            QuickAction("حوالة جديدة", Icons.AutoMirrored.Filled.Send, Color.Black, Screen.Remittances.route),
-            QuickAction("كشف حساب", Icons.Default.AccountBalance, Color.Black, Screen.Accounts.route)
+            QuickAction("سند جديد", Icons.AutoMirrored.Filled.ReceiptLong, Color(0xFF10B981), Screen.VoucherEntry.createRoute(VoucherType.RECEIPT.name)),
+            QuickAction("حوالة جديدة", Icons.Default.SwapHoriz, Color(0xFF2563EB), Screen.Remittances.route),
+            QuickAction("كشف حساب", Icons.Default.AccountBalance, Color(0xFF8B5CF6), Screen.Accounts.route)
         ),
         listOf(
-            QuickAction("قيد بسيط", Icons.Default.EditNote, ActionOrange, Screen.VoucherEntry.createRoute(VoucherType.SIMPLE_JOURNAL.name)),
-            QuickAction("الحركة اليومية", Icons.Default.Today, ActionOrange, Screen.Reports.route),
-            QuickAction("صناديق النقدية", Icons.Default.AccountBalanceWallet, ActionOrange, Screen.CashBoxesAndCurrencies.route)
+            QuickAction("قيد بسيط", Icons.Default.EditNote, Color(0xFFF59E0B), Screen.VoucherEntry.createRoute(VoucherType.SIMPLE_JOURNAL.name)),
+            QuickAction("الحركة اليومية", Icons.Default.CalendarToday, Color(0xFF06B6D4), Screen.Reports.route),
+            QuickAction("صناديق النقدية", Icons.Default.AccountBalanceWallet, Color(0xFFD97706), Screen.CashBoxesAndCurrencies.route)
         ),
         listOf(
-            QuickAction("فاتورة جديدة", Icons.AutoMirrored.Filled.ReceiptLong, Color.Black, Screen.InvoiceEditor.createRoute(InvoiceType.SALE.name)),
-            QuickAction("صرف عملات", Icons.Default.CurrencyExchange, Color.Black, Screen.CashBoxesAndCurrencies.route),
-            QuickAction("البحث الشامل", Icons.Default.Search, Color.Black, Screen.GlobalSearch.route)
+            QuickAction("فاتورة جديدة", Icons.Default.PointOfSale, Color(0xFFEF4444), Screen.InvoiceEditor.createRoute(InvoiceType.SALE.name)),
+            QuickAction("صرف عملات", Icons.Default.CurrencyExchange, Color(0xFF0284C7), Screen.CashBoxesAndCurrencies.route),
+            QuickAction("البحث الشامل", Icons.Default.ManageSearch, Color(0xFF4B5563), Screen.GlobalSearch.route)
         )
     ) + if (PermissionManager.permissionsOf(user).canManageRecurring) {
-        listOf(listOf(QuickAction("المعاملات المتكررة", Icons.Default.EventRepeat, ActionOrange, Screen.RecurringTransactions.route)))
+        listOf(listOf(QuickAction("المعاملات المتكررة", Icons.Default.EventRepeat, Color(0xFFD97706), Screen.RecurringTransactions.route)))
     } else emptyList()
 
     Scaffold(
@@ -257,13 +257,6 @@ fun DashboardScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 90.dp)
         ) {
-            // ===== هيدر ترحيبي خفيف وخالي من التكرار =====
-            CurvedHeader(
-                title = "مرحباً، ${user?.fullName?.substringBefore(" ") ?: ""}",
-                subtitle = user?.role?.arabicTitle ?: "",
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-            )
-
             // ===== تبويبات لوحة التحكم =====
             TabRow(
                 selectedTabIndex = dashboardTab,
@@ -569,30 +562,37 @@ private fun SyncBadge(syncState: com.smartaccountant.pro.core.sync.SyncUiState) 
 
 @Composable
 private fun QuickGridButton(action: QuickAction, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Surface(
+    ElevatedCard(
         onClick = onClick,
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.4f)),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
         modifier = modifier
     ) {
         Column(
-            modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 14.dp, horizontal = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = action.color.copy(alpha = 0.14f),
-                modifier = Modifier.size(38.dp)
+                shape = RoundedCornerShape(14.dp),
+                color = action.color.copy(alpha = 0.12f),
+                modifier = Modifier.size(46.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(action.icon, contentDescription = action.title, tint = action.color, modifier = Modifier.size(20.dp))
+                    Icon(
+                        imageVector = action.icon,
+                        contentDescription = action.title,
+                        tint = action.color,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
             Text(
-                action.title,
-                fontSize = 11.sp,
+                text = action.title,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
