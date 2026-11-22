@@ -56,7 +56,7 @@ data class AccountNode(
 
 fun buildAccountTree(accounts: List<AccountEntity>, balancesMap: Map<String, Double>): List<AccountNode> {
     val accountsById = accounts.associateBy { it.id }
-    val childrenMap = accounts.groupBy { it.parentId }
+    val childrenMap = accounts.groupBy { it.parentId?.takeIf { p -> p.isNotBlank() } }
 
     fun createNode(account: AccountEntity): AccountNode {
         val children = childrenMap[account.id]?.map { createNode(it) } ?: emptyList()
@@ -65,8 +65,8 @@ fun buildAccountTree(accounts: List<AccountEntity>, balancesMap: Map<String, Dou
         return AccountNode(account, children, balance = totalBalance)
     }
 
-    // الجذر هم الحسابات التي ليس لها أب
-    return childrenMap[null]?.map { createNode(it) } ?: emptyList()
+    val rootAccounts = accounts.filter { it.parentId.isNullOrBlank() || !accountsById.containsKey(it.parentId) }
+    return rootAccounts.map { createNode(it) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)

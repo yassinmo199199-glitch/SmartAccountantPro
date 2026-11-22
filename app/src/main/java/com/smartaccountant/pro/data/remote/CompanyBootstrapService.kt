@@ -153,6 +153,31 @@ class CompanyBootstrapService(
             defaultCurrencyId = curYer.id, allowMultiCurrency = true,
             syncStatus = SyncStatus.SYNCED
         )
+        val rootAssets = AccountEntity(
+            id = java.util.UUID.randomUUID().toString(), companyId = companyId,
+            name = "1- الأصول", category = AccountCategory.ASSETS,
+            defaultCurrencyId = curYer.id, allowMultiCurrency = true, syncStatus = SyncStatus.SYNCED
+        )
+        val rootLiabilities = AccountEntity(
+            id = java.util.UUID.randomUUID().toString(), companyId = companyId,
+            name = "2- الخصوم والالتزامات", category = AccountCategory.LIABILITIES,
+            defaultCurrencyId = curYer.id, allowMultiCurrency = true, syncStatus = SyncStatus.SYNCED
+        )
+        val rootEquity = AccountEntity(
+            id = java.util.UUID.randomUUID().toString(), companyId = companyId,
+            name = "3- حقوق الملكية", category = AccountCategory.EQUITY,
+            defaultCurrencyId = curYer.id, allowMultiCurrency = true, syncStatus = SyncStatus.SYNCED
+        )
+        val rootRevenues = AccountEntity(
+            id = java.util.UUID.randomUUID().toString(), companyId = companyId,
+            name = "4- الإيرادات", category = AccountCategory.REVENUES,
+            defaultCurrencyId = curYer.id, allowMultiCurrency = true, syncStatus = SyncStatus.SYNCED
+        )
+        val rootExpenses = AccountEntity(
+            id = java.util.UUID.randomUUID().toString(), companyId = companyId,
+            name = "5- المصروفات", category = AccountCategory.EXPENSES,
+            defaultCurrencyId = curYer.id, allowMultiCurrency = true, syncStatus = SyncStatus.SYNCED
+        )
         val settings = AppSettingsEntity(
             companyId = companyId, enableAppLock = true,
             appPinHash = PinHasher.hashPin("0000"), syncStatus = SyncStatus.SYNCED
@@ -167,6 +192,7 @@ class CompanyBootstrapService(
         db.financeDao().upsertCashBox(mainBox)
         db.inventoryDao().upsertWarehouse(mainWarehouse)
         db.accountDao().upsertAccount(cashCustomer)
+        db.accountDao().upsertAccounts(listOf(rootAssets, rootLiabilities, rootEquity, rootRevenues, rootExpenses))
         db.financeDao().upsertSettings(settings)
 
         // دفع سحابياً: العضوية أولاً حتى تسمح قواعد Firestore بباقي الكتابات
