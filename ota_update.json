@@ -1,7 +1,7 @@
 {
-  "versionCode": 24,
-  "versionName": "3.5.0",
-  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v3.5.0/app-debug.apk",
-  "releaseNotes": "تحديث رئيسي v3.5.0 يتضمن تفعيل فاحص البريد السحابي المباشر 3-Layer Unstoppable Email Login للدخول بالإيميل والباسوورد فوراً بدون الحاجة لكتابة كود الشركة.",
+  "versionCode": 25,
+  "versionName": "3.6.0",
+  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v3.6.0/app-debug.apk",
+  "releaseNotes": "تحديث رئيسي حاسم v3.6.0 يتضمن المعالجة الكلية لتهيأة الجلسة المجهولة Anonymous Auth وتفعيل التسجيل الفوري للبريد في global_users للدخول بالإيميل والباسوورد فوراً.",
   "mandatory": false
 }
