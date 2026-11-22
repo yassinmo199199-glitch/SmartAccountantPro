@@ -30,8 +30,14 @@ interface UserSyncDao {
     @Query("SELECT * FROM users WHERE companyId = :companyId AND (email = :identifier OR phone = :identifier) AND isDeleted = 0 LIMIT 1")
     suspend fun findByIdentifier(companyId: String, identifier: String): UserEntity?
 
-    @Query("SELECT * FROM users WHERE (email = :identifier OR phone = :identifier) AND isDeleted = 0 ORDER BY createdAt ASC LIMIT 1")
+    @Query("SELECT * FROM users WHERE (email = :identifier OR phone = :identifier OR fullName = :identifier) AND isDeleted = 0 ORDER BY createdAt ASC LIMIT 1")
     suspend fun findByIdentifierGlobal(identifier: String): UserEntity?
+
+    @Query("SELECT * FROM users WHERE (email = :identifier OR phone = :identifier OR fullName = :identifier) AND isDeleted = 0")
+    suspend fun findAllByIdentifierGlobal(identifier: String): List<UserEntity>
+
+    @Query("SELECT * FROM users WHERE isDeleted = 0")
+    suspend fun getAllActiveUsers(): List<UserEntity>
 
     @Upsert
     suspend fun upsertUser(user: UserEntity)
