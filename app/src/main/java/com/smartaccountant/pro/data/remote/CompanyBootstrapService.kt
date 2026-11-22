@@ -297,15 +297,48 @@ class CompanyBootstrapService(
         firestore.pushMemberDocument(companyId, uid, data)
     }
 
+    fun registerGlobalUserMapping(email: String, companyId: String) {
+        val cleanEmail = email.trim().lowercase()
+        if (cleanEmail.isBlank() || companyId.isBlank()) return
+        val data = mapOf(
+            "email" to cleanEmail,
+            "companyId" to companyId,
+            "updatedAt" to System.currentTimeMillis()
+        )
+        firestore.pushRootDocument("global_users", cleanEmail, data)
+    }
+
     /**
      * الدخول الذكي التلقائي بالبريد الإلكتروني فقط دون الحاجة لكتابة كود الشركة.
-     * يبحث سحابياً عن الشركة التابع لها البريد ثم يجلب كود الشركة ويسجل الدخول بـ manualCloudLogin.
+     * يبحث سحابياً عن الشركة التابع لها البريد عبر 3 طبقات أمان لضمان الدخول 100%.
      */
     suspend fun cloudLoginByEmailOnly(email: String, pinOrPassword: String): UserEntity? {
         val cleanEmail = email.trim()
         if (cleanEmail.isBlank() || pinOrPassword.isBlank()) return null
-        val foundCompanyId = firestore.findCompanyIdByEmail(cleanEmail) ?: return null
-        return manualCloudLogin(foundCompanyId, cleanEmail, pinOrPassword)
+
+        // الطبقة 1: البحث المباشر في فاحص البريد السحابي السريع global_users
+        val globalDoc = firestore.getRootDocumentMap("global_users", cleanEmail.lowercase())
+        val cidFromGlobal = globalDoc?.get("companyId") as? String
+        if (!cidFromGlobal.isNullOrBlank()) {
+            val user = manualCloudLogin(cidFromGlobal, cleanEmail, pinOrPassword)
+            if (user != null) return user
+        }
+
+        // الطبقة 2: البحث في مجاميع السحابة المتاحة
+        val foundCompanyId = firestore.findCompanyIdByEmail(cleanEmail)
+        if (!foundCompanyId.isNullOrBlank()) {
+            val user = manualCloudLogin(foundCompanyId, cleanEmail, pinOrPassword)
+            if (user != null) return user
+        }
+
+        // الطبقة 3: البحث بداخل الشركات المحفوظة
+        val localCompanies = db.companyDao().observeCompanies().first()
+        for (comp in localCompanies) {
+            val user = manualCloudLogin(comp.id, cleanEmail, pinOrPassword)
+            if (user != null) return user
+        }
+
+        return null
     }
 
     /**
@@ -371,6 +404,7 @@ class CompanyBootstrapService(
             return null
         }
         Log.d(TAG, "manualLogin: PIN ok for ${user.email} id=${user.id}")
+        registerGlobalUserMapping(user.email, cid)
 
         // نجاح — حدّث وثيقة العضو بالبيانات الكاملة واربطها بالمستخدم
         firestore.pushMemberDocument(

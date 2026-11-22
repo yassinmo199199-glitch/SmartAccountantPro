@@ -1,7 +1,7 @@
 {
-  "versionCode": 23,
-  "versionName": "3.4.0",
-  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v3.4.0/app-debug.apk",
-  "releaseNotes": "تحديث رئيسي v3.4.0 يتضمن رفع صور المرفقات المباشر قبل الحفظ، الترقيم الأوتوماتيكي لرموز FCM الإشعارية، والارتفاع التلقائي المباشر للحقول أعلى الكيبورد عند الكتابة.",
+  "versionCode": 24,
+  "versionName": "3.5.0",
+  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v3.5.0/app-debug.apk",
+  "releaseNotes": "تحديث رئيسي v3.5.0 يتضمن تفعيل فاحص البريد السحابي المباشر 3-Layer Unstoppable Email Login للدخول بالإيميل والباسوورد فوراً بدون الحاجة لكتابة كود الشركة.",
   "mandatory": false
 }

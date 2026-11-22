@@ -182,6 +182,16 @@ class FirestoreSyncService(
         }
     }
 
+    /** دفع مستند في المجموعة الرئيسية مثل global_users/{docId} */
+    fun pushRootDocument(collection: String, docId: String, data: Map<String, Any?>) {
+        if (!isFirebaseConfigured()) return
+        try {
+            com.google.firebase.firestore.FirebaseFirestore.getInstance().collection(collection).document(docId).set(data)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     /** جلب وثيقة الشركة نفسها من companies/{companyId} */
     suspend fun <T> getCompanyDocument(companyId: String, clazz: Class<T>): T? {
         val cid = resolveCompanyId(companyId) ?: return null
