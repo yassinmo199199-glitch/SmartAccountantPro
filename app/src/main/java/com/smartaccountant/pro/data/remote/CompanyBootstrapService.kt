@@ -302,8 +302,8 @@ class CompanyBootstrapService(
         if (cleanEmail.isBlank() || companyId.isBlank()) return
         val data = mapOf(
             "email" to cleanEmail,
-            "companyId" to companyId,
-            "updatedAt" to System.currentTimeMillis()
+            "companyIds" to com.google.firebase.firestore.FieldValue.arrayUnion(companyId),
+            "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
         )
         firestore.pushRootDocument("global_users", cleanEmail, data)
     }

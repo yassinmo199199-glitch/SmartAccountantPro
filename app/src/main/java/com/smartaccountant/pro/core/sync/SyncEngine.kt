@@ -575,9 +575,13 @@ class SyncEngine(
                 val reqBody = bodyJson.toRequestBody(jsonMediaType)
                 val request = okhttp3.Request.Builder()
                     .url("https://fcm.googleapis.com/fcm/send")
+                    .header("Authorization", "key=${AppConfig.FCM_LEGACY_SERVER_KEY}")
                     .post(reqBody)
                     .build()
-                client.newCall(request).execute().close()
+                
+                if (AppConfig.FCM_LEGACY_SERVER_KEY.isNotBlank()) {
+                    client.newCall(request).execute().close()
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()

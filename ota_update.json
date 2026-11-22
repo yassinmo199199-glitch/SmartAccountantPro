@@ -1,7 +1,7 @@
 {
-  "versionCode": 27,
-  "versionName": "3.8.0",
-  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v3.8.0/app-debug.apk",
-  "releaseNotes": "تحديث رئيسي v3.8.0 يتضمن المعالجة الكلية لتسجيل الدخول الفوري بالإيميل والباسوورد المباشر مع إرسال إشعارات FCM High-Priority لكافة الهواتف المغلقة.",
+  "versionCode": 28,
+  "versionName": "3.9.0",
+  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v3.9.0/app-debug.apk",
+  "releaseNotes": "تحديث رئيسي v3.9.0 يتضمن المعالجة النهائية لنظام الدخول المباشر بالإيميل وتفعيل الاسترجاع الذكي للشركات بدون كود الشركة، مع إطلاق إشعارات الدفع المباشرة FCM.",
   "mandatory": false
 }

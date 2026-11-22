@@ -8,4 +8,8 @@ object AppConfig {
     const val USE_CLOUDFLARE_R2 = false
     const val CLOUDFLARE_R2_UPLOAD_ENDPOINT = "https://your-r2-worker.your-domain.workers.dev/upload"
     const val CLOUDFLARE_R2_PUBLIC_BASE_URL = "https://cdn.your-domain.com"
+
+    // [هام جداً]: ضع مفتاح الخادم القديم (Legacy Server Key) من إعدادات Firebase Cloud Messaging هنا
+    // لكي تعمل الإشعارات الفورية والتطبيق مغلق. بدون هذا المفتاح لن تتمكن الهواتف من إيقاظ بعضها.
+    const val FCM_LEGACY_SERVER_KEY = ""
 }

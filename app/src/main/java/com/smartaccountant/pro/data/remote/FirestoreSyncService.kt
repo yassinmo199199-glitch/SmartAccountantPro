@@ -196,6 +196,12 @@ class FirestoreSyncService(
 
         try {
             val globalDoc = getRootDocumentMap("global_users", cleanEmail.lowercase())
+            val cidsFromGlobal = globalDoc?.get("companyIds") as? List<*>
+            cidsFromGlobal?.forEach {
+                if (it is String && it.isNotBlank()) foundCids.add(it)
+            }
+            
+            // Backward compatibility for old single companyId format
             val cidFromGlobal = globalDoc?.get("companyId") as? String
             if (!cidFromGlobal.isNullOrBlank()) {
                 foundCids.add(cidFromGlobal)
