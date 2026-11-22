@@ -265,6 +265,13 @@ class MainViewModel(val container: AppContainer) : ViewModel() {
             }
             val info = container.appUpdateManager.fetchLatest()
             if (info != null) {
+                val fileName = "smart-accountant-${info.versionCode}.apk"
+                val dir = container.appContext.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS) ?: container.appContext.cacheDir
+                val existingFile = java.io.File(dir, fileName)
+                if (existingFile.exists() && existingFile.length() > 0) {
+                    _appUpdate.value = AppUpdateState(AppUpdateStatus.READY, info, "التحديث جاهز للتثبيت")
+                    return@launch
+                }
                 _appUpdate.value = AppUpdateState(AppUpdateStatus.AVAILABLE, info)
             } else if (manualCheck) {
                 showMessage("أنت تستخدم أحدث إصدار من التطبيق بالفعل (${com.smartaccountant.pro.BuildConfig.VERSION_NAME})")
@@ -274,7 +281,9 @@ class MainViewModel(val container: AppContainer) : ViewModel() {
 
     fun startAppUpdateDownload() {
         val info = _appUpdate.value.info ?: return
-        _appUpdate.value = AppUpdateState(AppUpdateStatus.DOWNLOADING, info, "جاري تنزيل التحديث 0%")
+        _appUpdate.value = AppUpdateState(AppUpdateStatus.DOWNLOADING, info, "جاري تنزيل التحديث في الخلفية...")
+
+        com.smartaccountant.pro.data.remote.OtaDownloadWorker.enqueueDownload(container.appContext, info)
 
         viewModelScope.launch {
             val (file, errorMsg) = container.appUpdateManager.downloadFileDirectly(info) { progress ->

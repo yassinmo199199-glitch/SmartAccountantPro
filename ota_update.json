@@ -1,7 +1,7 @@
 {
-  "versionCode": 17,
-  "versionName": "2.7.0",
-  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v2.7.0/app-debug.apk",
-  "releaseNotes": "إصدار رئيسي v2.7.0 يتضمن نقاط البيع السريعة POS والطباعة الحرارية وتحسينات واجهة المستخدم الشاملة.",
+  "versionCode": 18,
+  "versionName": "2.9.0",
+  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v2.9.0/app-debug.apk",
+  "releaseNotes": "تنسيق واستمرار تنزيل التحديث بـ الخلفية عبر WorkManager حتى لو تم إغلاق التطبيق كلياً.",
   "mandatory": false
 }
