@@ -1,15 +1,19 @@
 package com.smartaccountant.pro.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,7 +32,7 @@ import com.smartaccountant.pro.ui.theme.DebitRed
 import com.smartaccountant.pro.ui.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun GeneralJournalScreen(
     mainViewModel: MainViewModel,
@@ -180,41 +184,103 @@ fun GeneralJournalScreen(
                     Text("دائن", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
 
+                var activeMenuVoucherId by remember { mutableStateOf<String?>(null) }
+                var voucherToDelete by remember { mutableStateOf<com.smartaccountant.pro.data.model.VoucherEntity?>(null) }
+
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(filteredLines) { line ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onNavigateToVoucher(line.voucher.id) }
-                                .padding(horizontal = 12.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(line.voucher.displayNumber, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
-                                Text(DateUtils.formatDate(line.voucher.dateMillis), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            Column(modifier = Modifier.weight(2f)) {
-                                Text(accountsMap[line.accountId] ?: "حساب محذوف", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                val desc = if (line.lineNote.isNotBlank()) line.lineNote else line.voucher.description
-                                if (desc.isNotBlank()) {
-                                    Text(desc, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = { onNavigateToVoucher(line.voucher.id) },
+                                        onLongClick = { activeMenuVoucherId = line.voucher.id }
+                                    )
+                                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(line.voucher.displayNumber, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                                    Text(DateUtils.formatDate(line.voucher.dateMillis), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
+                                Column(modifier = Modifier.weight(2f)) {
+                                    Text(accountsMap[line.accountId] ?: "حساب محذوف", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                    val desc = if (line.lineNote.isNotBlank()) line.lineNote else line.voucher.description
+                                    if (desc.isNotBlank()) {
+                                        Text(desc, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                                    }
+                                }
+                                Text(
+                                    text = if (line.debit > 0) CurrencyFormatter.formatAmount(line.debit) else "-",
+                                    modifier = Modifier.weight(1f),
+                                    color = if (line.debit > 0) DebitRed else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 13.sp, fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = if (line.credit > 0) CurrencyFormatter.formatAmount(line.credit) else "-",
+                                    modifier = Modifier.weight(1f),
+                                    color = if (line.credit > 0) CreditGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 13.sp, fontWeight = FontWeight.SemiBold
+                                )
                             }
-                            Text(
-                                text = if (line.debit > 0) CurrencyFormatter.formatAmount(line.debit) else "-",
-                                modifier = Modifier.weight(1f),
-                                color = if (line.debit > 0) DebitRed else MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 13.sp, fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = if (line.credit > 0) CurrencyFormatter.formatAmount(line.credit) else "-",
-                                modifier = Modifier.weight(1f),
-                                color = if (line.credit > 0) CreditGreen else MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 13.sp, fontWeight = FontWeight.SemiBold
-                            )
+
+                            DropdownMenu(
+                                expanded = activeMenuVoucherId == line.voucher.id,
+                                onDismissRequest = { activeMenuVoucherId = null }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("عرض التفاصيل") },
+                                    leadingIcon = { Icon(Icons.Default.Visibility, contentDescription = null) },
+                                    onClick = {
+                                        activeMenuVoucherId = null
+                                        onNavigateToVoucher(line.voucher.id)
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("حذف القيد / السند", color = DebitRed) },
+                                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = DebitRed) },
+                                    onClick = {
+                                        activeMenuVoucherId = null
+                                        voucherToDelete = line.voucher
+                                    }
+                                )
+                            }
                         }
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                     }
+                }
+
+                if (voucherToDelete != null) {
+                    AlertDialog(
+                        onDismissRequest = { voucherToDelete = null },
+                        title = { Text("تأكيد حذف القيد / السند") },
+                        text = { Text("هل أنت تأكيد من رغبتك في حذف القيد/السند ${voucherToDelete?.displayNumber}؟") },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    val targetVoucher = voucherToDelete ?: return@Button
+                                    val currentUser = user ?: return@Button
+                                    scope.launch {
+                                        try {
+                                            mainViewModel.container.accountingRepository.deleteVoucher(currentUser, targetVoucher)
+                                            mainViewModel.showMessage("تم حذف القيد/السند بنجاح")
+                                            journalLines = mainViewModel.container.db.reportsDao().getAllJournalLines(companyId)
+                                            voucherToDelete = null
+                                        } catch (e: Exception) {
+                                            mainViewModel.showError(e, "فشل حذف القيد")
+                                        }
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = DebitRed)
+                            ) {
+                                Text("تأكيد الحذف", color = androidx.compose.ui.graphics.Color.White)
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { voucherToDelete = null }) { Text("إلغاء") }
+                        }
+                    )
                 }
             }
         }

@@ -26,8 +26,36 @@ class AdminRepository(
         isEdit: Boolean
     ) {
         PermissionManager.requirePermission(adminUser, { it.canManageUsers }, "هذه العملية مخصصة لمدير النظام فقط")
+        if (!syncEngine.isOnline) {
+            throw IllegalStateException("يلزم وجود اتصال فعال بالإنترنت لإضافة أو تعديل صلاحيات الموظفين ومزامنتها سحابياً")
+        }
         if (targetUser.role == UserRole.OWNER && adminUser.id != targetUser.id) {
             throw SecurityException("لا يمكن تعيين مستخدم آخر كمدير نظام رئيسي")
+        }
+
+        val emailRegex = Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
+        val phoneRegex = Regex("^[0-9+]{8,15}$")
+
+        val cleanEmail = targetUser.email.trim()
+        val cleanPhone = targetUser.phone.trim()
+
+        val isValidEmail = cleanEmail.isNotBlank() && emailRegex.matches(cleanEmail)
+        val isValidPhone = cleanPhone.isNotBlank() && phoneRegex.matches(cleanPhone)
+
+        if (!isValidEmail && !isValidPhone) {
+            throw IllegalArgumentException("يرجى إدخال بريد إلكتروني صحيح (مثل: name@company.com) أو رقم جوال صحيح")
+        }
+
+        val existingUsers = db.userSyncDao().getAllActiveUsers()
+        val duplicateUser = existingUsers.find { u ->
+            u.id != targetUser.id &&
+            !u.isDeleted &&
+            ((isValidEmail && u.email.equals(cleanEmail, ignoreCase = true)) ||
+             (isValidPhone && cleanPhone.isNotBlank() && u.phone == cleanPhone))
+        }
+
+        if (duplicateUser != null) {
+            throw IllegalArgumentException("عذراً، البريد الإلكتروني أو رقم الجوال مسجل بالفعل لموظف آخر (${duplicateUser.fullName})")
         }
 
         val hashedPin = if (!rawNewPin.isNullOrBlank()) PinHasher.hashPin(rawNewPin) else targetUser.pinHash

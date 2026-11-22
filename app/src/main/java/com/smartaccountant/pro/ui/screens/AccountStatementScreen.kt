@@ -1,8 +1,10 @@
 package com.smartaccountant.pro.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -82,7 +84,7 @@ fun AccountStatementScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun AccountStatementContent(
     accountId: String,
@@ -738,6 +740,7 @@ fun AccountStatementContent(
                 }
 
                 // ===== قائمة حركات الكشف =====
+                var activeMenuRowId by remember { mutableStateOf<String?>(null) }
                 if (statementRows.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
                         Text("لا توجد حركات مسجلة لهذا الحساب", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -745,21 +748,27 @@ fun AccountStatementContent(
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         items(statementRows) { row ->
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        if (row.isInvoice) onNavigateToInvoice(row.id)
-                                        else onNavigateToVoucher(row.id)
-                                    }
-                            ) {
-                                Row(
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState())
-                                        .padding(horizontal = 10.dp, vertical = 9.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .combinedClickable(
+                                            onClick = {
+                                                if (row.isInvoice) onNavigateToInvoice(row.id)
+                                                else onNavigateToVoucher(row.id)
+                                            },
+                                            onLongClick = {
+                                                activeMenuRowId = row.id
+                                            }
+                                        )
                                 ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(rememberScrollState())
+                                            .padding(horizontal = 10.dp, vertical = 9.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
                                     // 1. التاريخ
                                     Text(
                                         text = DateUtils.formatDate(row.dateMillis),
@@ -864,6 +873,21 @@ fun AccountStatementContent(
                                 }
                                 HorizontalDivider(color = Color(0xFFE2E8F0))
                             }
+
+                            DropdownMenu(
+                                expanded = activeMenuRowId == row.id,
+                                onDismissRequest = { activeMenuRowId = null }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("عرض التفاصيل") },
+                                    leadingIcon = { Icon(Icons.Default.Visibility, contentDescription = null) },
+                                    onClick = {
+                                        activeMenuRowId = null
+                                        if (row.isInvoice) onNavigateToInvoice(row.id)
+                                        else onNavigateToVoucher(row.id)
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -949,4 +973,6 @@ fun AccountStatementContent(
     }
 }
 }
+}
+
 

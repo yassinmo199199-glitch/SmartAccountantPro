@@ -63,6 +63,7 @@ class SyncEngine(
     // حالة الاتصال الفعلية: شبكة + مصادقة + استجابة Firestore
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private var hasNetwork = false
+    val isOnline: Boolean get() = hasNetwork
     private var listenersActive = false
     private var cloudReachable = true
     private var autoSyncJob: Job? = null
