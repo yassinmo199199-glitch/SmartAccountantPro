@@ -1,7 +1,7 @@
 {
-  "versionCode": 14,
-  "versionName": "2.4.2",
-  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v2.4.2/app-debug.apk",
-  "releaseNotes": "إصلاح تصوير الكاميرا ومزامنة الصور المرفقة للسحاب، وتسهيل استخدام التطبيق أثناء التنزيل بالخلفية.",
+  "versionCode": 15,
+  "versionName": "2.5.0",
+  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v2.5.0/app-debug.apk",
+  "releaseNotes": "نقطة استعادة برمجية شامة v2.5.0 تتضمن نظام الإشعارات الفورية للعمليات والمزامنة التلقائية والتحسينات المتقدمة.",
   "mandatory": false
 }

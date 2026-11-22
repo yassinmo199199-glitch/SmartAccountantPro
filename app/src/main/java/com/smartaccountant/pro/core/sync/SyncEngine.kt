@@ -420,6 +420,52 @@ class SyncEngine(
         }
     }
 
+    suspend fun pullRemoteOperationsAndNotify(companyId: String) {
+        if (companyId.isBlank()) return
+        val prefs = context.getSharedPreferences("sync_engine_bg_prefs", Context.MODE_PRIVATE)
+        val lastNotifiedTime = prefs.getLong("last_notified_bg_log_time_$companyId", System.currentTimeMillis() - (12 * 3600 * 1000L))
+
+        try {
+            val logs = remote.fetchCollectionSince(companyId, "audit_logs", AuditLogEntity::class.java, lastNotifiedTime)
+            var maxTimestamp = lastNotifiedTime
+
+            logs.forEach { log ->
+                if (log.timestamp > maxTimestamp) maxTimestamp = log.timestamp
+                val fromOtherDevice = log.deviceName.isNotBlank() &&
+                        log.deviceName != deviceName &&
+                        log.deviceName != legacyDeviceName
+
+                if (log.timestamp > lastNotifiedTime && fromOtherDevice) {
+                    db.userSyncDao().insertAuditLog(log.copy(syncStatus = SyncStatus.SYNCED))
+                    val isVoucher = VoucherType.entries.any { it.arabicTitle == log.entityType }
+                    val isInvoice = InvoiceType.entries.any { it.arabicTitle == log.entityType }
+                    val destination = when {
+                        isVoucher -> MainActivity.DESTINATION_VOUCHER
+                        isInvoice -> MainActivity.DESTINATION_INVOICES
+                        else -> MainActivity.DESTINATION_AUDIT
+                    }
+                    val title = when {
+                        isVoucher -> "عملية سند جديدة: ${log.entityType}"
+                        isInvoice -> "عملية فاتورة جديدة: ${log.entityType}"
+                        else -> "عملية جديدة: ${log.entityType}"
+                    }
+                    showRealtimeNotification(
+                        title = title,
+                        body = "الموظف ${log.userName} — ${log.action.arabicTitle}: ${log.summary}",
+                        notificationId = ("bg_op_" + log.id).hashCode(),
+                        documentId = log.entityId.takeIf { isVoucher },
+                        destination = destination
+                    )
+                }
+            }
+            if (maxTimestamp > lastNotifiedTime) {
+                prefs.edit().putLong("last_notified_bg_log_time_$companyId", maxTimestamp).apply()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     /** مزامنة تلقائية دورية كل 10 ثوانٍ أثناء فتح التطبيق */
     private fun startAutoSyncLoop(companyId: String) {
         autoSyncJob?.cancel()

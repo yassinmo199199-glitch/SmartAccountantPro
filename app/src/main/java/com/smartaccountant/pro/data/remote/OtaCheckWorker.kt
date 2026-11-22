@@ -17,6 +17,10 @@ class OtaCheckWorker(
             if (info != null) {
                 AppUpdateManager.notifyNewUpdateAvailable(applicationContext, info)
             }
+            val activeCompanyId = app.container.sessionStore.currentCompanyId
+            if (!activeCompanyId.isNullOrBlank()) {
+                app.container.syncEngine.pullRemoteOperationsAndNotify(activeCompanyId)
+            }
             Result.success()
         } catch (_: Exception) {
             Result.retry()

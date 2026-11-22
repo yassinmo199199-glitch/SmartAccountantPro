@@ -115,6 +115,26 @@ class FirestoreSyncService(
         }
     }
 
+    suspend fun <T> fetchCollectionSince(companyId: String, collection: String, clazz: Class<T>, minTimestamp: Long): List<T> {
+        val cid = resolveCompanyId(companyId) ?: return emptyList()
+        ensureAnonymousAuthOrNull() ?: return emptyList()
+        val db = firestoreOrNull() ?: return emptyList()
+        val snap = try {
+            db.collection("companies").document(cid).collection(collection)
+                .whereGreaterThan("timestamp", minTimestamp)
+                .get().await()
+        } catch (_: Exception) {
+            return emptyList()
+        }
+        return snap.documents.mapNotNull { doc ->
+            try {
+                gson.fromJson(gson.toJson(doc.data), clazz)
+            } catch (_: Exception) {
+                null
+            }
+        }
+    }
+
     /** جلب وثيقة الشركة نفسها من companies/{companyId} */
     suspend fun <T> getCompanyDocument(companyId: String, clazz: Class<T>): T? {
         val cid = resolveCompanyId(companyId) ?: return null

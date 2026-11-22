@@ -12,10 +12,11 @@ class SyncWorker(
     override suspend fun doWork(): Result {
         val companyId = inputData.getString("companyId") ?: return Result.success()
         val app = applicationContext as? SmartAccountantApp ?: return Result.retry()
-        return if (app.container.syncEngine.syncPendingNow(companyId)) {
-            app.container.syncEngine.startRealtimeListeners(companyId, scheduleInitialSync = false)
+        return try {
+            app.container.syncEngine.syncPendingNow(companyId)
+            app.container.syncEngine.pullRemoteOperationsAndNotify(companyId)
             Result.success()
-        } else {
+        } catch (_: Exception) {
             Result.retry()
         }
     }
