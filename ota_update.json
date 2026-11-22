@@ -1,7 +1,7 @@
 {
-  "versionCode": 15,
-  "versionName": "2.5.0",
-  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v2.5.0/app-debug.apk",
-  "releaseNotes": "نقطة استعادة برمجية شامة v2.5.0 تتضمن نظام الإشعارات الفورية للعمليات والمزامنة التلقائية والتحسينات المتقدمة.",
+  "versionCode": 16,
+  "versionName": "2.6.0",
+  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v2.6.0/app-debug.apk",
+  "releaseNotes": "نقطة استعادة برمجية v2.6.0 تتضمن المحرك المطور للبحث التراكمي في سجل الرقابة وصلاحيات الموظفين المتقدمة.",
   "mandatory": false
 }
