@@ -35,23 +35,37 @@ class FirebaseAuthService(private val context: Context) {
     }
 
     /**
-     * يضمن وجود جلسة مصادقة نشطة (request.auth != null) قبل أي قراءة أو كتابة في Firestore
+     * يضمن وجود جلسة مصادقة نشطة موثقة بـ Firebase Auth بالإيميل أو المصادقة المجهولة
      */
     suspend fun ensureAuthenticatedSession(email: String? = null, password: String? = null): String? {
         if (!isFirebaseReady()) return null
         return try {
             val auth = FirebaseAuth.getInstance()
-            auth.currentUser?.uid?.let { return it }
 
-            if (!email.isNullOrBlank() && !password.isNullOrBlank() && password.length >= 6) {
+            if (!email.isNullOrBlank() && !password.isNullOrBlank()) {
+                val cleanEmail = email.trim()
+                val cleanPassword = password.trim()
                 try {
-                    val res = auth.signInWithEmailAndPassword(email, password).await()
-                    return res.user?.uid
-                } catch (_: Exception) {
-                    // التراجع للمصادقة المجهولة المرتبطة بمعرف المستخدم الداخلي
+                    // تسجيل الخروج من الجلسة المجهولة السابقة للتوثيق المباشر بالإيميل
+                    if (auth.currentUser?.isAnonymous == true) {
+                        auth.signOut()
+                    }
+                    val res = auth.signInWithEmailAndPassword(cleanEmail, cleanPassword).await()
+                    val uid = res.user?.uid
+                    if (!uid.isNullOrBlank()) return uid
+                } catch (e: Exception) {
+                    Log.w(TAG, "signInWithEmailAndPassword failed for $cleanEmail: ${e.message}")
+                    try {
+                        val createRes = auth.createUserWithEmailAndPassword(cleanEmail, cleanPassword).await()
+                        val uid = createRes.user?.uid
+                        if (!uid.isNullOrBlank()) return uid
+                    } catch (createEx: Exception) {
+                        Log.w(TAG, "createUserWithEmailAndPassword failed: ${createEx.message}")
+                    }
                 }
             }
 
+            auth.currentUser?.uid?.let { return it }
             val anonRes = auth.signInAnonymously().await()
             anonRes.user?.uid
         } catch (e: Exception) {

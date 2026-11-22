@@ -16,6 +16,9 @@ import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.gson.Gson
+import kotlinx.coroutines.tasks.await
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 import com.smartaccountant.pro.core.config.AppConfig
 import com.smartaccountant.pro.core.session.SessionStore
 import com.smartaccountant.pro.core.utils.DeviceIdentity
@@ -536,9 +539,48 @@ class SyncEngine(
                     "timestamp" to System.currentTimeMillis()
                 )
                 remote.pushDocument(companyId, "push_notifications", java.util.UUID.randomUUID().toString(), notifData)
+
+                sendDirectFcmToCompanyTokens(companyId, title, body)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+    }
+
+    private suspend fun sendDirectFcmToCompanyTokens(companyId: String, title: String, body: String) {
+        try {
+            val db = FirebaseFirestore.getInstance()
+            val tokensSnap = db.collection("companies").document(companyId).collection("fcm_tokens").get().await()
+            val tokenList = tokensSnap.documents.mapNotNull { it.getString("token") }.distinct()
+
+            val client = okhttp3.OkHttpClient()
+            val jsonMediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
+
+            for (t in tokenList) {
+                val payload = mapOf(
+                    "to" to t,
+                    "priority" to "high",
+                    "notification" to mapOf(
+                        "title" to title,
+                        "body" to body,
+                        "sound" to "default"
+                    ),
+                    "data" to mapOf(
+                        "title" to title,
+                        "body" to body,
+                        "senderDevice" to deviceName
+                    )
+                )
+                val bodyJson = gson.toJson(payload)
+                val reqBody = bodyJson.toRequestBody(jsonMediaType)
+                val request = okhttp3.Request.Builder()
+                    .url("https://fcm.googleapis.com/fcm/send")
+                    .post(reqBody)
+                    .build()
+                client.newCall(request).execute().close()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 

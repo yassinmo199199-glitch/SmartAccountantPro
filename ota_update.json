@@ -1,7 +1,7 @@
 {
-  "versionCode": 26,
-  "versionName": "3.7.0",
-  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v3.7.0/app-debug.apk",
-  "releaseNotes": "تحديث رئيسي ممتاز v3.7.0 يتضمن نظام اختيار الشركات التفاعلي (Multi-Company Selector) والدخول السلس بالإيميل والباسوورد فقط دون الحاجة لكتابة كود الشركة صراحة.",
+  "versionCode": 27,
+  "versionName": "3.8.0",
+  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v3.8.0/app-debug.apk",
+  "releaseNotes": "تحديث رئيسي v3.8.0 يتضمن المعالجة الكلية لتسجيل الدخول الفوري بالإيميل والباسوورد المباشر مع إرسال إشعارات FCM High-Priority لكافة الهواتف المغلقة.",
   "mandatory": false
 }

@@ -322,7 +322,7 @@ class CompanyBootstrapService(
     suspend fun cloudLoginByEmailOnly(email: String, pinOrPassword: String): UserEntity? {
         val cleanEmail = email.trim()
         if (cleanEmail.isBlank() || pinOrPassword.isBlank()) return null
-        ensureAnonymousAuthOrNull()
+        firestore.authService.ensureAuthenticatedSession(cleanEmail, pinOrPassword)
 
         // الطبقة 1: البحث المباشر في فاحص البريد السحابي السريع global_users
         val globalDoc = firestore.getRootDocumentMap("global_users", cleanEmail.lowercase())

@@ -13,7 +13,7 @@ import kotlinx.coroutines.tasks.await
 
 class FirestoreSyncService(
     private val context: Context,
-    private val authService: FirebaseAuthService
+    val authService: FirebaseAuthService
 ) {
     private val gson = Gson()
     private val sessionStore by lazy { SessionStore(context) }
