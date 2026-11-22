@@ -23,3 +23,11 @@ data class CompanyEntity(
     val syncStatus: SyncStatus = SyncStatus.PENDING_CREATE,
     val isDeleted: Boolean = false
 )
+
+data class CompanySelectionInfo(
+    val companyId: String,
+    val companyName: String,
+    val roleTitle: String = "عضو",
+    val ownerName: String = "",
+    val isOwner: Boolean = false
+)

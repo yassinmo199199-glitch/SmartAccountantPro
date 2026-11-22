@@ -52,6 +52,44 @@ class MainViewModel(val container: AppContainer) : ViewModel() {
     private val _appUpdate = MutableStateFlow(AppUpdateState())
     val appUpdate: StateFlow<AppUpdateState> = _appUpdate.asStateFlow()
 
+    private var pendingLoginEmail: String = ""
+    private var pendingLoginPin: String = ""
+    private val _companySelectionList = MutableStateFlow<List<com.smartaccountant.pro.data.model.CompanySelectionInfo>>(emptyList())
+    val companySelectionList: StateFlow<List<com.smartaccountant.pro.data.model.CompanySelectionInfo>> = _companySelectionList.asStateFlow()
+
+    fun dismissCompanySelection() {
+        _companySelectionList.value = emptyList()
+    }
+
+    fun selectCompanyAndLogin(compInfo: com.smartaccountant.pro.data.model.CompanySelectionInfo) {
+        viewModelScope.launch {
+            _companySelectionList.value = emptyList()
+            _session.update { it.copy(isLoading = true) }
+            try {
+                val cloudUser = container.companyBootstrapService.manualCloudLogin(compInfo.companyId, pendingLoginEmail, pendingLoginPin)
+                if (cloudUser != null) {
+                    var company = container.db.companyDao().getById(compInfo.companyId)
+                    if (company == null) {
+                        container.companyBootstrapService.pullCompanyData(compInfo.companyId)
+                        company = container.db.companyDao().getById(compInfo.companyId)
+                    }
+                    if (company != null) {
+                        _session.update { it.copy(activeCompany = company, isLoading = false) }
+                        bindCompanyFlows(company.id)
+                    }
+                    unlockWithUser(cloudUser)
+                    _session.update { it.copy(isLoading = false) }
+                    return@launch
+                }
+                _session.update { it.copy(isLoading = false) }
+                showMessage("تعذر الدخول إلى ${compInfo.companyName}")
+            } catch (e: Exception) {
+                _session.update { it.copy(isLoading = false) }
+                showMessage("خطأ أثناء تسجيل الدخول: ${e.localizedMessage}")
+            }
+        }
+    }
+
     private var companyFlowsJob: Job? = null
 
     init {
@@ -334,6 +372,20 @@ class MainViewModel(val container: AppContainer) : ViewModel() {
 
             _session.update { it.copy(isLoading = true) }
             try {
+                pendingLoginEmail = trimmed
+                pendingLoginPin = pin
+
+                // 0. فحص تعدديّة الشركات المتاحة لهذا الإيميل سحابياً
+                val availableCompanies = container.companyBootstrapService.fetchUserCompaniesForLogin(trimmed)
+                if (availableCompanies.size > 1) {
+                    _companySelectionList.value = availableCompanies
+                    _session.update { it.copy(isLoading = false) }
+                    return@launch
+                } else if (availableCompanies.size == 1) {
+                    selectCompanyAndLogin(availableCompanies.first())
+                    return@launch
+                }
+
                 // 1. البحث العالمي الشامل أولاً عن المستخدم في كل الشركات
                 var user: UserEntity? = container.db.userSyncDao().findByIdentifierGlobal(trimmed)
 
@@ -344,14 +396,8 @@ class MainViewModel(val container: AppContainer) : ViewModel() {
                     }
                 }
 
-                // 2. إذا وُجد المستخدم محلياً، التحقق من رمز PIN أو كلمة المرور
-                if (user != null) {
-                    if (!user.isActive) {
-                        _session.update { it.copy(isLoading = false) }
-                        showMessage("تم إيقاف هذا الحساب من قبل مدير النظام")
-                        return@launch
-                    }
-
+                // 2. إذا وُجد المستخدم محلياً وكان PIN صحيحاً، سجل الدخول محلياً
+                if (user != null && user.isActive) {
                     val isValidPin = PinHasher.verifyPin(pin, user.pinHash) || pin == "1234" || pin == user.pinHash
                     if (isValidPin) {
                         val allCompanies = container.db.companyDao().observeCompanies().first()
@@ -362,18 +408,18 @@ class MainViewModel(val container: AppContainer) : ViewModel() {
                             unlockWithUser(user)
                             return@launch
                         }
-                    } else {
-                        _session.update { it.copy(isLoading = false) }
-                        showMessage("رمز الدخول PIN / كلمة المرور غير صحيحة")
-                        return@launch
                     }
                 }
 
-                // 3. البحث السحابي المباشر التلقائي بالإيميل دون الحاجة لكود الشركة
+                // 3. البحث السحابي المباشر التلقائي بالإيميل سحابياً دون الحاجة لكود الشركة
                 val cloudUser = container.companyBootstrapService.cloudLoginByEmailOnly(trimmed, pin)
                 if (cloudUser != null) {
-                    val company = container.db.companyDao().getById(cloudUser.companyId)
+                    var company = container.db.companyDao().getById(cloudUser.companyId)
                         ?: container.db.companyDao().observeCompanies().first().find { it.id == cloudUser.companyId }
+                    if (company == null) {
+                        container.companyBootstrapService.pullCompanyData(cloudUser.companyId)
+                        company = container.db.companyDao().getById(cloudUser.companyId)
+                    }
                     if (company != null) {
                         _session.update { it.copy(activeCompany = company, isLoading = false) }
                         bindCompanyFlows(company.id)

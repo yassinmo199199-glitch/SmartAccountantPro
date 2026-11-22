@@ -1,7 +1,7 @@
 {
-  "versionCode": 25,
-  "versionName": "3.6.0",
-  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v3.6.0/app-debug.apk",
-  "releaseNotes": "تحديث رئيسي حاسم v3.6.0 يتضمن المعالجة الكلية لتهيأة الجلسة المجهولة Anonymous Auth وتفعيل التسجيل الفوري للبريد في global_users للدخول بالإيميل والباسوورد فوراً.",
+  "versionCode": 26,
+  "versionName": "3.7.0",
+  "apkUrl": "https://github.com/yassinmo199199-glitch/SmartAccountantPro/releases/download/v3.7.0/app-debug.apk",
+  "releaseNotes": "تحديث رئيسي ممتاز v3.7.0 يتضمن نظام اختيار الشركات التفاعلي (Multi-Company Selector) والدخول السلس بالإيميل والباسوورد فقط دون الحاجة لكتابة كود الشركة صراحة.",
   "mandatory": false
 }

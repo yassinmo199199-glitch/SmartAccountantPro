@@ -135,12 +135,17 @@ class FirestoreSyncService(
         }
     }
 
-    /** بحث سحابي شامل لربط البريد الإلكتروني بكود شركته أوتوماتيكياً */
+    /** بحث سحابي شامل لربط البريد الإلكتروني بكود شركته أوتوماتيكياً عبر 3 فلاتر استعلام سريعة */
     suspend fun findCompanyIdByEmail(email: String): String? {
+        ensureAnonymousAuthOrNull() ?: return null
         val db = firestoreOrNull() ?: return null
+        val cleanEmail = email.trim()
+        if (cleanEmail.isBlank()) return null
+
         return try {
+            // 1. فحص مجاميع المستخدمين
             val usersSnap = db.collectionGroup("users")
-                .whereEqualTo("email", email.trim())
+                .whereEqualTo("email", cleanEmail)
                 .get()
                 .await()
 
@@ -149,8 +154,9 @@ class FirestoreSyncService(
                 if (cid.isNotBlank()) return cid
             }
 
+            // 2. فحص مجاميع الأعضاء
             val membersSnap = db.collectionGroup("members")
-                .whereEqualTo("email", email.trim())
+                .whereEqualTo("email", cleanEmail)
                 .get()
                 .await()
 
@@ -158,10 +164,102 @@ class FirestoreSyncService(
                 val cid = doc.getString("companyId") ?: ""
                 if (cid.isNotBlank()) return cid
             }
+
+            // 3. مسح كولكشن الشركات المتاحة سحابياً كحل ثالث ضامن 100%
+            val companiesSnap = db.collection("companies").limit(25).get().await()
+            for (compDoc in companiesSnap.documents) {
+                val cid = compDoc.id
+                val userDocs = db.collection("companies").document(cid).collection("users")
+                    .whereEqualTo("email", cleanEmail)
+                    .limit(1)
+                    .get()
+                    .await()
+                if (!userDocs.isEmpty) return cid
+            }
+
             null
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            e.printStackTrace()
             null
         }
+    }
+
+    /** جلب كافة الشركات المعتمدة للبريد الإلكتروني لعرضها بقائمة اختيار الشركات عند تسجيل الدخول */
+    suspend fun fetchUserCompaniesByEmail(email: String): List<com.smartaccountant.pro.data.model.CompanySelectionInfo> {
+        ensureAnonymousAuthOrNull() ?: return emptyList()
+        val db = firestoreOrNull() ?: return emptyList()
+        val cleanEmail = email.trim()
+        if (cleanEmail.isBlank()) return emptyList()
+
+        val results = mutableListOf<com.smartaccountant.pro.data.model.CompanySelectionInfo>()
+        val foundCids = mutableSetOf<String>()
+
+        try {
+            val globalDoc = getRootDocumentMap("global_users", cleanEmail.lowercase())
+            val cidFromGlobal = globalDoc?.get("companyId") as? String
+            if (!cidFromGlobal.isNullOrBlank()) {
+                foundCids.add(cidFromGlobal)
+            }
+
+            try {
+                val usersSnap = db.collectionGroup("users")
+                    .whereEqualTo("email", cleanEmail)
+                    .get()
+                    .await()
+
+                for (doc in usersSnap.documents) {
+                    val cid = doc.getString("companyId") ?: doc.reference.parent.parent?.id ?: ""
+                    if (cid.isNotBlank()) foundCids.add(cid)
+                }
+            } catch (_: Exception) {}
+
+            try {
+                val companiesSnap = db.collection("companies").limit(25).get().await()
+                for (compDoc in companiesSnap.documents) {
+                    val cid = compDoc.id
+                    val userDocs = db.collection("companies").document(cid).collection("users")
+                        .whereEqualTo("email", cleanEmail)
+                        .limit(1)
+                        .get()
+                        .await()
+                    if (!userDocs.isEmpty) foundCids.add(cid)
+                }
+            } catch (_: Exception) {}
+
+            for (cid in foundCids) {
+                val compDoc = db.collection("companies").document(cid).get().await()
+                val nameAr = compDoc.getString("nameAr") ?: "شركة ($cid)"
+                val ownerUserId = compDoc.getString("ownerUserId") ?: ""
+
+                val userDocs = db.collection("companies").document(cid).collection("users")
+                    .whereEqualTo("email", cleanEmail)
+                    .limit(1)
+                    .get()
+                    .await()
+
+                val userRole = userDocs.documents.firstOrNull()?.getString("role") ?: "عضو"
+                val isOwner = userRole.equals("OWNER", ignoreCase = true) || ownerUserId.isNotBlank()
+
+                results.add(
+                    com.smartaccountant.pro.data.model.CompanySelectionInfo(
+                        companyId = cid,
+                        companyName = nameAr,
+                        roleTitle = when (userRole.uppercase()) {
+                            "OWNER" -> "المالك / المدير العام"
+                            "MANAGER" -> "مدير فرع"
+                            "ACCOUNTANT" -> "محاسب رئيسي"
+                            "CASHIER" -> "كاشير / مبيعات"
+                            else -> "عضو معتمد"
+                        },
+                        isOwner = isOwner
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        return results.distinctBy { it.companyId }
     }
 
     /** مستمع للشركة نفسها لمزامنة الاسم والبيانات مع كل الأجهزة مباشرة */

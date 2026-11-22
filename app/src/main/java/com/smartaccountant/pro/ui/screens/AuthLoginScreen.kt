@@ -11,8 +11,15 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.filled.AdminPanelSettings
+import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
@@ -23,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -153,9 +161,75 @@ fun AuthLoginScreen(
         if (showInviteLogin) {
             InviteCodeLoginDialog(mainViewModel = mainViewModel, onDismiss = { showInviteLogin = false })
         }
+
+        val companySelectionList by mainViewModel.companySelectionList.collectAsState()
+        if (companySelectionList.isNotEmpty()) {
+            CompanySelectionDialog(
+                companies = companySelectionList,
+                onSelectCompany = { comp -> mainViewModel.selectCompanyAndLogin(comp) },
+                onDismiss = { mainViewModel.dismissCompanySelection() }
+            )
+        }
     }
 }
 
+@Composable
+private fun CompanySelectionDialog(
+    companies: List<com.smartaccountant.pro.data.model.CompanySelectionInfo>,
+    onSelectCompany: (com.smartaccountant.pro.data.model.CompanySelectionInfo) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Default.Business, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp)) },
+        title = { Text("اختر الشركة للدخول", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text("حسابك معتمد في عدة شركات، يرجى تحديد الشركة المراد متابعة العمل عليها:", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                companies.forEach { comp ->
+                    Card(
+                        onClick = { onSelectCompany(comp) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = if (comp.isOwner) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                            ) {
+                                Icon(
+                                    imageVector = if (comp.isOwner) Icons.Default.AdminPanelSettings else Icons.Default.Badge,
+                                    contentDescription = null,
+                                    tint = if (comp.isOwner) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                                    modifier = Modifier.padding(10.dp)
+                                )
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(comp.companyName, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                Text("كود الشركة: ${comp.companyId}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("الصفة: ${comp.roleTitle}", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.primary)
+                            }
+                            Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("إلغاء") }
+        }
+    )
+}
+
+@OptIn(androidx.camera.core.ExperimentalGetImage::class)
 @Composable
 private fun InviteCodeLoginDialog(mainViewModel: MainViewModel, onDismiss: () -> Unit) {
     var inviteJson by remember { mutableStateOf("") }
@@ -286,6 +360,7 @@ private fun QrScannerDialog(onResult: (String) -> Unit, onDismiss: () -> Unit) {
                                         .build()
                                 )
                                 val executor = Executors.newSingleThreadExecutor()
+                                @androidx.camera.core.ExperimentalGetImage
                                 analysis.setAnalyzer(executor) { imageProxy ->
                                     val mediaImage = imageProxy.image
                                     if (mediaImage == null) {
