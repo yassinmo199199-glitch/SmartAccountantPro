@@ -39,5 +39,6 @@ sealed class Screen(val route: String, val title: String) {
     data object GlobalSearch : Screen("global_search", "بحث شامل")
     data object GeneralJournal : Screen("general_journal", "الدفتر العام")
     data object CostCenters : Screen("cost_centers", "مراكز التكلفة")
+    data object Pos : Screen("pos", "نقطة البيع السريعة (POS)")
     data object More : Screen("more", "المزيد")
 }

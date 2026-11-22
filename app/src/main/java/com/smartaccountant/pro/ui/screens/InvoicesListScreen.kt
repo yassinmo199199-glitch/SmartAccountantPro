@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -119,6 +120,17 @@ fun InvoicesListScreen(mainViewModel: MainViewModel, navController: NavControlle
         ) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { navController.navigate(Screen.Pos.route) },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Storefront, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("فتح نقطة البيع السريعة (POS)", fontWeight = FontWeight.Bold)
+                    }
+
                     OutlinedTextField(
                         value = searchText,
                         onValueChange = { searchText = it },

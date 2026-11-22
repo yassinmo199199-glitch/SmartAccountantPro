@@ -333,6 +333,9 @@ fun AppNavigation(
                 onNavigateToVoucher = { voucherId -> navController.navigate(Screen.VoucherDetails.createRoute(voucherId)) }
             )
         }
+        composable(Screen.Pos.route) {
+            PosScreen(mainViewModel = mainViewModel, onBack = { navController.popBackStack() })
+        }
         composable(Screen.More.route) {
             MoreScreen(
                 mainViewModel = mainViewModel,
