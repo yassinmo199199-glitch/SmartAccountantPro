@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -144,6 +145,27 @@ fun GeneralJournalScreen(
                     .padding(padding)
                     .background(MaterialTheme.colorScheme.surface)
             ) {
+                var searchQuery by remember { mutableStateOf("") }
+                val filteredLines = remember(journalLines, searchQuery) {
+                    if (searchQuery.isBlank()) journalLines
+                    else journalLines.filter { line ->
+                        (accountsMap[line.accountId] ?: "").contains(searchQuery, ignoreCase = true) ||
+                        line.voucher.displayNumber.contains(searchQuery, ignoreCase = true) ||
+                        line.voucher.description.contains(searchQuery, ignoreCase = true) ||
+                        line.lineNote.contains(searchQuery, ignoreCase = true)
+                    }
+                }
+
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("بحث برقم القيد، الحساب، أو البيان...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "بحث") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+
                 // ترويسة الجدول
                 Row(
                     modifier = Modifier
@@ -159,7 +181,7 @@ fun GeneralJournalScreen(
                 }
 
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(journalLines) { line ->
+                    items(filteredLines) { line ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
