@@ -206,6 +206,25 @@ class SyncEngine(
             // مزامنة تلقائية كل 10 ثوانٍ ما دام التطبيق مفتوحاً ومتصلاً
             startAutoSyncLoop(companyId)
 
+            // تسجيل رمز FCM Token للجهاز لسحب الإشعارات الفورية
+            try {
+                com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                    if (task.isSuccessful && task.result != null) {
+                        val token = task.result
+                        val tokenData = mapOf(
+                            "token" to token,
+                            "deviceName" to deviceName,
+                            "updatedAt" to System.currentTimeMillis()
+                        )
+                        scope.launch(Dispatchers.IO) {
+                            remote.pushDocument(companyId, "fcm_tokens", kotlin.math.abs(deviceName.hashCode()).toString(), tokenData)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
             // 0. Company Entity (مستمع فوري لكائن وثيقة الشركة لمزامنة تغيير اسم الشركة والشعار مع كل الأجهزة)
             remote.listenCompanyDocument(companyId, CompanyEntity::class.java) { updatedCompany ->
                 if (updatedCompany != null) {

@@ -74,7 +74,7 @@ fun AdminUsersScreen(mainViewModel: MainViewModel, onBack: () -> Unit) {
     ) { padding ->
         PermissionGuard(user = adminUser, permissionCheck = { it.canManageUsers }) {
             Column(
-                modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).imePadding().padding(12.dp),
+                modifier = Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 // زر بارز لإضافة موظف
@@ -185,7 +185,7 @@ fun AdminUsersScreen(mainViewModel: MainViewModel, onBack: () -> Unit) {
             onDismissRequest = { editingUser = null },
             title = { Text(if (isNewUser) "إضافة مستخدم جديد" else "تعديل: ${target.fullName}") },
             text = {
-                Column(modifier = Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()).imePadding(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(modifier = Modifier.heightIn(max = 460.dp).imePadding().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     formErrorMsg?.let { errMsg ->
                         Card(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),

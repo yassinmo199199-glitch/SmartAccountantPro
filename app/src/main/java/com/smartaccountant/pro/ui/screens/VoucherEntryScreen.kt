@@ -251,7 +251,10 @@ fun VoucherEntryScreen(
                 }
 
                 val localAttachment = attachmentPath?.let(::File)
-                val attachmentUrl = localAttachment?.absolutePath.orEmpty()
+                val uploadedUrl = if (localAttachment != null && localAttachment.isFile) {
+                    mainViewModel.container.cloudMediaStorage.compressAndUploadAttachment(companyId, localAttachment, "vouchers")
+                } else ""
+                val attachmentUrl = if (uploadedUrl.isNotBlank()) uploadedUrl else (localAttachment?.absolutePath ?: editingVoucher?.attachmentUrl.orEmpty())
                 val base = editingVoucher
 
                 val voucherToSave = base?.copy(
@@ -321,7 +324,10 @@ fun VoucherEntryScreen(
                 }
 
                 val localAttachment = attachmentPath?.let(::File)
-                val attachmentUrl = localAttachment?.absolutePath.orEmpty()
+                val uploadedUrl = if (localAttachment != null && localAttachment.isFile) {
+                    mainViewModel.container.cloudMediaStorage.compressAndUploadAttachment(companyId, localAttachment, "vouchers")
+                } else ""
+                val attachmentUrl = if (uploadedUrl.isNotBlank()) uploadedUrl else (localAttachment?.absolutePath ?: editingVoucher?.attachmentUrl.orEmpty())
                 val base = editingVoucher
 
                 val voucherToSave = base?.copy(
@@ -434,8 +440,8 @@ fun VoucherEntryScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .verticalScroll(rememberScrollState())
                     .imePadding()
+                    .verticalScroll(rememberScrollState())
                     .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {

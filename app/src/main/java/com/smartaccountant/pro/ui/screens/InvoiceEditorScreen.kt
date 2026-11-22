@@ -107,7 +107,7 @@ fun InvoiceEditorScreen(
         }
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).imePadding().padding(10.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(10.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // ===== الترويسة الملونة: النوع + الدفع =====
