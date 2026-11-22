@@ -375,16 +375,18 @@ class MainViewModel(val container: AppContainer) : ViewModel() {
                     }
                 }
 
-                // 3. البحث السحابي في الشركات المتاحة
-                val allCompanies = container.db.companyDao().observeCompanies().first()
-                for (comp in allCompanies) {
-                    val cloudUser = container.companyBootstrapService.manualCloudLogin(comp.id, trimmed, pin)
-                    if (cloudUser != null) {
-                        _session.update { it.copy(activeCompany = comp, isLoading = false) }
-                        bindCompanyFlows(comp.id)
-                        unlockWithUser(cloudUser)
-                        return@launch
+                // 3. البحث السحابي المباشر التلقائي بالإيميل دون الحاجة لكود الشركة
+                val cloudUser = container.companyBootstrapService.cloudLoginByEmailOnly(trimmed, pin)
+                if (cloudUser != null) {
+                    val company = container.db.companyDao().getById(cloudUser.companyId)
+                        ?: container.db.companyDao().observeCompanies().first().find { it.id == cloudUser.companyId }
+                    if (company != null) {
+                        _session.update { it.copy(activeCompany = company, isLoading = false) }
+                        bindCompanyFlows(company.id)
                     }
+                    unlockWithUser(cloudUser)
+                    _session.update { it.copy(isLoading = false) }
+                    return@launch
                 }
 
                 // 4. الدخول المباشر بـ Firebase Auth كحل إضافي

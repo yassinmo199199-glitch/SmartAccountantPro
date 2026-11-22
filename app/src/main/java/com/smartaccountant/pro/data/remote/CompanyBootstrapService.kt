@@ -298,6 +298,17 @@ class CompanyBootstrapService(
     }
 
     /**
+     * الدخول الذكي التلقائي بالبريد الإلكتروني فقط دون الحاجة لكتابة كود الشركة.
+     * يبحث سحابياً عن الشركة التابع لها البريد ثم يجلب كود الشركة ويسجل الدخول بـ manualCloudLogin.
+     */
+    suspend fun cloudLoginByEmailOnly(email: String, pinOrPassword: String): UserEntity? {
+        val cleanEmail = email.trim()
+        if (cleanEmail.isBlank() || pinOrPassword.isBlank()) return null
+        val foundCompanyId = firestore.findCompanyIdByEmail(cleanEmail) ?: return null
+        return manualCloudLogin(foundCompanyId, cleanEmail, pinOrPassword)
+    }
+
+    /**
      * دخول يدوي: كود الشركة + البريد/الجوال + PIN.
      * قواعد Firestore تشترط وجود members/{auth.uid} لقراءة أي بيانات داخل الشركة،
      * لذلك نسجّل عضوية مؤقتة ذاتية (مسموحة: uid == memberId) ثم نقرأ users ونتحقق من PIN.

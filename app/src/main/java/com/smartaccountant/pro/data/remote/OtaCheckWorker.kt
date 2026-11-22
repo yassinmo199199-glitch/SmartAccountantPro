@@ -36,7 +36,7 @@ class OtaCheckWorker(
                 .build()
 
             val periodicRequest = PeriodicWorkRequestBuilder<OtaCheckWorker>(
-                2, TimeUnit.HOURS
+                15, TimeUnit.MINUTES
             )
                 .setConstraints(constraints)
                 .build()

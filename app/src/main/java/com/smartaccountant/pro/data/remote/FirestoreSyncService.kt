@@ -135,6 +135,35 @@ class FirestoreSyncService(
         }
     }
 
+    /** بحث سحابي شامل لربط البريد الإلكتروني بكود شركته أوتوماتيكياً */
+    suspend fun findCompanyIdByEmail(email: String): String? {
+        val db = firestoreOrNull() ?: return null
+        return try {
+            val usersSnap = db.collectionGroup("users")
+                .whereEqualTo("email", email.trim())
+                .get()
+                .await()
+
+            for (doc in usersSnap.documents) {
+                val cid = doc.getString("companyId") ?: doc.reference.parent.parent?.id ?: ""
+                if (cid.isNotBlank()) return cid
+            }
+
+            val membersSnap = db.collectionGroup("members")
+                .whereEqualTo("email", email.trim())
+                .get()
+                .await()
+
+            for (doc in membersSnap.documents) {
+                val cid = doc.getString("companyId") ?: ""
+                if (cid.isNotBlank()) return cid
+            }
+            null
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     /** جلب وثيقة الشركة نفسها من companies/{companyId} */
     suspend fun <T> getCompanyDocument(companyId: String, clazz: Class<T>): T? {
         val cid = resolveCompanyId(companyId) ?: return null
